@@ -45,4 +45,23 @@ public class Util {
 				&& Files.list(path.resolve("platform-tools")).filter(file -> file.getFileName().toString().equals("adb")
 						|| file.getFileName().toString().equals("adb.exe")).count() > 0;
 	}
+
+	public static int findClosingBracket(String expression, int index) {
+		if (expression.charAt(index) != '{') {
+			return -1;
+		}
+
+		int count = 0;
+		for (int i = index; i < expression.length(); i++) {
+			if (expression.charAt(i) == '{') {
+				count++;
+			} else if (expression.charAt(i) == '}') {
+				if (--count == 0) {
+					return i;
+				}
+			}
+		}
+
+		return -1;
+	}
 }

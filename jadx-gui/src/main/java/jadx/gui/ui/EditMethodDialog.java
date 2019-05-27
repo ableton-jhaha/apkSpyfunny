@@ -44,13 +44,13 @@ public class EditMethodDialog extends JDialog {
 				StringBuilder original = new StringBuilder(cls.getCls().getClassNode().getCode().getCodeStr());
 				String changed = EditMethodDialog.this.codeArea.getText();
 
+				String method = changed.substring(changed.indexOf("    "), changed.lastIndexOf('}') - 1);
 				original.delete(params.methodStart, params.methodEnd + 1);
-				original.insert(params.methodStart,
-						changed.substring(changed.indexOf("    "), changed.lastIndexOf('}') - 1));
+				original.insert(params.methodStart, method);
 
+				String head = changed.substring(0, changed.substring(0, changed.indexOf("class ")).lastIndexOf('\n'));
 				original.delete(params.headStart, params.headEnd);
-				original.insert(params.headStart,
-						changed.substring(0, changed.substring(0, changed.indexOf("class ")).lastIndexOf('\n')));
+				original.insert(params.headStart, head);
 
 				String completed = original.toString();
 
@@ -64,7 +64,7 @@ public class EditMethodDialog extends JDialog {
 
 				selectedCodeArea.setCaretPosition(caret);
 
-				ChangeCache.getChanges().put(cls.getFullName(), completed);
+				ChangeCache.putChange(cls.getFullName(), changed, head, method);
 
 				dispose();
 			}
