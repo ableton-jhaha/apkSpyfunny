@@ -1,3 +1,16 @@
+## apkSpy
+A fork of jadx with support for editing Java source code of APK's, and then recompiling them. Inspired by [dnSpy](https://github.com/0xd4d/dnSpy), but for Android Java instead of .NET.
+
+### How it Works
+apkSpy allows you to recompile individual methods of classes, so you can recompile only small pieces, regardless of whether the other parts of the application are compiling or not. Once you've made your changed you can export it as an APK.
+
+### Limitations and Future Goals
+* Currently you cannot edit Smali bytecode. This would be very useful, as you can edit a method even if that method itself does not compile.
+* You can only edit methods. It would be great to have support for editing member fields.
+* The ability to create and delete classes, as well as create and delete new methods.
+
+Below is the README for jadx.
+
 ## JADX
 
 [![Build Status](https://travis-ci.org/skylot/jadx.png?branch=master)](https://travis-ci.org/skylot/jadx)
