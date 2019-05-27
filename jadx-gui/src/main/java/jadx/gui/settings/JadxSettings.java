@@ -4,6 +4,9 @@ import java.awt.Font;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Window;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -14,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import javax.swing.JFrame;
 
@@ -41,8 +45,8 @@ public class JadxSettings extends JadxCLIArgs {
 
 	private static final Font DEFAULT_FONT = new RSyntaxTextArea().getFont();
 
-	static final Set<String> SKIP_FIELDS = new HashSet<>(Arrays.asList(
-			"files", "input", "outDir", "outDirSrc", "outDirRes", "verbose", "printVersion", "printHelp"));
+	static final Set<String> SKIP_FIELDS = new HashSet<>(Arrays.asList("files", "input", "outDir", "outDirSrc",
+			"outDirRes", "verbose", "printVersion", "printHelp"));
 	private Path lastSaveProjectPath = USER_HOME;
 	private Path lastOpenFilePath = USER_HOME;
 	private Path lastSaveFilePath = USER_HOME;
@@ -67,8 +71,11 @@ public class JadxSettings extends JadxCLIArgs {
 
 	private int settingsVersion = 0;
 
+	private String androidSdkPath = "";
+
 	@JadxSettingsAdapter.GsonExclude
-	@Parameter(names = { "-sc", "--select-class" }, description = "GUI: Open the selected class and show the decompiled code")
+	@Parameter(names = { "-sc",
+			"--select-class" }, description = "GUI: Open the selected class and show the decompiled code")
 	private String cmdSelectClass = null;
 
 	public static JadxSettings makeDefault() {
@@ -99,6 +106,20 @@ public class JadxSettings extends JadxCLIArgs {
 		}
 		if (settingsVersion != CURRENT_SETTINGS_VERSION) {
 			upgradeSettings(settingsVersion);
+		}
+		if (androidSdkPath.isEmpty() || !Files.isDirectory(Paths.get(androidSdkPath))) {
+			List<Path> directories = Arrays.stream(System.getenv("PATH").split(File.pathSeparator))
+					.map(path -> Paths.get(path)).filter(path -> {
+						try {
+							return Files.list(path).filter(item -> item.getFileName().toString().equals("adb")
+									|| item.getFileName().toString().equals("adb.exe")).count() > 0;
+						} catch (IOException e) {
+							return false;
+						}
+					}).collect(Collectors.toList());
+			if (directories.size() > 0) {
+				androidSdkPath = directories.get(0).getParent().toString();
+			}
 		}
 	}
 
@@ -433,5 +454,13 @@ public class JadxSettings extends JadxCLIArgs {
 	@Override
 	protected JadxCLIArgs newInstance() {
 		return new JadxSettings();
+	}
+
+	public String getAndroidSdkPath() {
+		return androidSdkPath;
+	}
+
+	public void setAndroidSdkPath(String androidSdkPath) {
+		this.androidSdkPath = androidSdkPath;
 	}
 }

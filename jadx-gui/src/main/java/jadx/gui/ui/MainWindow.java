@@ -243,6 +243,10 @@ public class MainWindow extends JFrame {
 		clearTree();
 	}
 
+	public JadxProject getProject() {
+		return project;
+	}
+
 	private void clearTree() {
 		tabbedPane.closeAllTabs();
 		resetCache();
@@ -281,11 +285,8 @@ public class MainWindow extends JFrame {
 			}
 
 			if (Files.exists(path)) {
-				int res = JOptionPane.showConfirmDialog(
-						this,
-						NLS.str("confirm.save_as_message", path.getFileName()),
-						NLS.str("confirm.save_as_title"),
-						JOptionPane.YES_NO_OPTION);
+				int res = JOptionPane.showConfirmDialog(this, NLS.str("confirm.save_as_message", path.getFileName()),
+						NLS.str("confirm.save_as_title"), JOptionPane.YES_NO_OPTION);
 				if (res == JOptionPane.NO_OPTION) {
 					return;
 				}
@@ -296,8 +297,7 @@ public class MainWindow extends JFrame {
 	}
 
 	void open(Path path) {
-		if (path.getFileName().toString().toLowerCase(Locale.ROOT)
-				.endsWith(JadxProject.PROJECT_EXTENSION)) {
+		if (path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(JadxProject.PROJECT_EXTENSION)) {
 			openProject(path);
 		} else {
 			project.setFilePath(path);
@@ -313,11 +313,8 @@ public class MainWindow extends JFrame {
 
 	private boolean ensureProjectIsSaved() {
 		if (project != null && !project.isSaved() && !project.isInitial()) {
-			int res = JOptionPane.showConfirmDialog(
-					this,
-					NLS.str("confirm.not_saved_message"),
-					NLS.str("confirm.not_saved_title"),
-					JOptionPane.YES_NO_CANCEL_OPTION);
+			int res = JOptionPane.showConfirmDialog(this, NLS.str("confirm.not_saved_message"),
+					NLS.str("confirm.not_saved_title"), JOptionPane.YES_NO_CANCEL_OPTION);
 			if (res == JOptionPane.CANCEL_OPTION) {
 				return false;
 			}
@@ -334,10 +331,7 @@ public class MainWindow extends JFrame {
 		}
 		project = JadxProject.from(path, settings);
 		if (project == null) {
-			JOptionPane.showMessageDialog(
-					this,
-					NLS.str("msg.project_error"),
-					NLS.str("msg.project_error_title"),
+			JOptionPane.showMessageDialog(this, NLS.str("msg.project_error"), NLS.str("msg.project_error_title"),
 					JOptionPane.INFORMATION_MESSAGE);
 			return;
 		}
@@ -362,8 +356,7 @@ public class MainWindow extends JFrame {
 		} else {
 			pathString = " [" + projectPath.getParent().toAbsolutePath() + ']';
 		}
-		setTitle((project.isSaved() ? "" : '*')
-				+ project.getName() + pathString + " - " + DEFAULT_TITLE);
+		setTitle((project.isSaved() ? "" : '*') + project.getName() + pathString + " - " + DEFAULT_TITLE);
 
 	}
 
@@ -407,11 +400,8 @@ public class MainWindow extends JFrame {
 		JadxArgs decompilerArgs = wrapper.getArgs();
 		if ((!decompilerArgs.isFsCaseSensitive() && !decompilerArgs.isRenameCaseSensitive())
 				|| !decompilerArgs.isRenameValid() || !decompilerArgs.isRenamePrintable()) {
-			JOptionPane.showMessageDialog(
-					this,
-					NLS.str("msg.rename_disabled", settings.getLangLocale()),
-					NLS.str("msg.rename_disabled_title", settings.getLangLocale()),
-					JOptionPane.INFORMATION_MESSAGE);
+			JOptionPane.showMessageDialog(this, NLS.str("msg.rename_disabled", settings.getLangLocale()),
+					NLS.str("msg.rename_disabled_title", settings.getLangLocale()), JOptionPane.INFORMATION_MESSAGE);
 		}
 		JFileChooser fileChooser = new JFileChooser();
 		fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -627,8 +617,8 @@ public class MainWindow extends JFrame {
 			}
 		};
 		prefsAction.putValue(Action.SHORT_DESCRIPTION, NLS.str("menu.preferences"));
-		prefsAction.putValue(Action.ACCELERATOR_KEY, getKeyStroke(KeyEvent.VK_P,
-				UiUtils.ctrlButton() | KeyEvent.SHIFT_DOWN_MASK));
+		prefsAction.putValue(Action.ACCELERATOR_KEY,
+				getKeyStroke(KeyEvent.VK_P, UiUtils.ctrlButton() | KeyEvent.SHIFT_DOWN_MASK));
 
 		Action exitAction = new AbstractAction(NLS.str("file.exit"), ICON_CLOSE) {
 			@Override
@@ -700,8 +690,8 @@ public class MainWindow extends JFrame {
 			}
 		};
 		logAction.putValue(Action.SHORT_DESCRIPTION, NLS.str("menu.log"));
-		logAction.putValue(Action.ACCELERATOR_KEY, getKeyStroke(KeyEvent.VK_L,
-				UiUtils.ctrlButton() | KeyEvent.SHIFT_DOWN_MASK));
+		logAction.putValue(Action.ACCELERATOR_KEY,
+				getKeyStroke(KeyEvent.VK_L, UiUtils.ctrlButton() | KeyEvent.SHIFT_DOWN_MASK));
 
 		Action aboutAction = new AbstractAction(NLS.str("menu.about"), ICON_JADX) {
 			@Override
@@ -717,8 +707,8 @@ public class MainWindow extends JFrame {
 			}
 		};
 		backAction.putValue(Action.SHORT_DESCRIPTION, NLS.str("nav.back"));
-		backAction.putValue(Action.ACCELERATOR_KEY, getKeyStroke(KeyEvent.VK_LEFT,
-				UiUtils.ctrlButton() | KeyEvent.ALT_DOWN_MASK));
+		backAction.putValue(Action.ACCELERATOR_KEY,
+				getKeyStroke(KeyEvent.VK_LEFT, UiUtils.ctrlButton() | KeyEvent.ALT_DOWN_MASK));
 
 		Action forwardAction = new AbstractAction(NLS.str("nav.forward"), ICON_FORWARD) {
 			@Override
@@ -727,8 +717,24 @@ public class MainWindow extends JFrame {
 			}
 		};
 		forwardAction.putValue(Action.SHORT_DESCRIPTION, NLS.str("nav.forward"));
-		forwardAction.putValue(Action.ACCELERATOR_KEY, getKeyStroke(KeyEvent.VK_RIGHT,
-				UiUtils.ctrlButton() | KeyEvent.ALT_DOWN_MASK));
+		forwardAction.putValue(Action.ACCELERATOR_KEY,
+				getKeyStroke(KeyEvent.VK_RIGHT, UiUtils.ctrlButton() | KeyEvent.ALT_DOWN_MASK));
+
+		Action apkSpyConfigAction = new AbstractAction(NLS.str("menu.apkSpy_config")) {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				new ApkSpyConfigurator(MainWindow.this).setVisible(true);
+			}
+		};
+		Action apkSpySaveAction = new AbstractAction(NLS.str("menu.apkSpy_save")) {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				new ApkSpySaver(MainWindow.this).setVisible(true);
+			}
+		};
+		apkSpySaveAction.putValue(Action.SHORT_DESCRIPTION, NLS.str("menu.apkSpy_save"));
+		apkSpySaveAction.putValue(Action.ACCELERATOR_KEY,
+				getKeyStroke(KeyEvent.VK_SEMICOLON, UiUtils.ctrlButton() | KeyEvent.SHIFT_DOWN_MASK));
 
 		JMenu file = new JMenu(NLS.str("menu.file"));
 		file.setMnemonic(KeyEvent.VK_F);
@@ -770,12 +776,17 @@ public class MainWindow extends JFrame {
 		help.setMnemonic(KeyEvent.VK_H);
 		help.add(aboutAction);
 
+		JMenu apkSpy = new JMenu(NLS.str("menu.apkSpy"));
+		apkSpy.add(apkSpySaveAction);
+		apkSpy.add(apkSpyConfigAction);
+
 		JMenuBar menuBar = new JMenuBar();
 		menuBar.add(file);
 		menuBar.add(view);
 		menuBar.add(nav);
 		menuBar.add(tools);
 		menuBar.add(help);
+		menuBar.add(apkSpy);
 		setJMenuBar(menuBar);
 
 		flatPkgButton = new JToggleButton(ICON_FLAT_PKG);
@@ -846,8 +857,7 @@ public class MainWindow extends JFrame {
 		});
 		tree.setCellRenderer(new DefaultTreeCellRenderer() {
 			@Override
-			public Component getTreeCellRendererComponent(JTree tree,
-					Object value, boolean selected, boolean expanded,
+			public Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected, boolean expanded,
 					boolean isLeaf, int row, boolean focused) {
 				Component c = super.getTreeCellRendererComponent(tree, value, selected, expanded, isLeaf, row, focused);
 				if (value instanceof JNode) {
@@ -942,8 +952,8 @@ public class MainWindow extends JFrame {
 		DisplayMode mode = gd.getDisplayMode();
 		int w = mode.getWidth();
 		int h = mode.getHeight();
-		setBounds((int) (w * BORDER_RATIO), (int) (h * BORDER_RATIO),
-				(int) (w * WINDOW_RATIO), (int) (h * WINDOW_RATIO));
+		setBounds((int) (w * BORDER_RATIO), (int) (h * BORDER_RATIO), (int) (w * WINDOW_RATIO),
+				(int) (h * WINDOW_RATIO));
 		setLocationRelativeTo(null);
 	}
 

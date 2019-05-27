@@ -24,8 +24,8 @@ import jadx.gui.ui.MainWindow;
 import jadx.gui.utils.JumpPosition;
 
 /**
- * The {@link AbstractCodeArea} implementation used for displaying Java code and text based
- * resources (e.g. AndroidManifest.xml)
+ * The {@link AbstractCodeArea} implementation used for displaying Java code and
+ * text based resources (e.g. AndroidManifest.xml)
  */
 public final class CodeArea extends AbstractCodeArea {
 	private static final Logger LOG = LoggerFactory.getLogger(CodeArea.class);
@@ -98,6 +98,9 @@ public final class CodeArea extends AbstractCodeArea {
 	private void addMenuItems(JClass jCls) {
 		FindUsageAction findUsage = new FindUsageAction(contentPanel, this, jCls);
 		GoToDeclarationAction goToDeclaration = new GoToDeclarationAction(contentPanel, this, jCls);
+		EditMethodAction editMethodJava = new EditMethodAction(EditMethodAction.JAVA, contentPanel, this, jCls);
+		// EditMethodAction editMethodSmali = new
+		// EditMethodAction(EditMethodAction.SMALI, contentPanel, this, jCls);
 
 		JPopupMenu popup = getPopupMenu();
 		popup.addSeparator();
@@ -105,6 +108,11 @@ public final class CodeArea extends AbstractCodeArea {
 		popup.add(goToDeclaration);
 		popup.addPopupMenuListener(findUsage);
 		popup.addPopupMenuListener(goToDeclaration);
+		popup.addSeparator();
+		popup.add(editMethodJava);
+		// popup.add(editMethodSmali);
+		popup.addPopupMenuListener(editMethodJava);
+		// popup.addPopupMenuListener(editMethodSmali);
 	}
 
 	public static RSyntaxTextArea getDefaultArea(MainWindow mainWindow) {
@@ -135,7 +143,8 @@ public final class CodeArea extends AbstractCodeArea {
 	 */
 	public JavaNode getJavaNodeAtOffset(JClass jCls, int offset) {
 		try {
-			// TODO: add direct mapping for code offset to CodeWriter (instead of line and line offset pair)
+			// TODO: add direct mapping for code offset to CodeWriter (instead of line and
+			// line offset pair)
 			int line = this.getLineOfOffset(offset);
 			int lineOffset = offset - this.getLineStartOffset(line);
 			return jCls.getCls().getJavaNodeAtPosition(line + 1, lineOffset + 1);
