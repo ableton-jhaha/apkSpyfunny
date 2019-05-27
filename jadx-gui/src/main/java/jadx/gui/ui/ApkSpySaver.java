@@ -32,7 +32,6 @@ public class ApkSpySaver extends JDialog {
 
 		JTextArea output = new JTextArea();
 		output.setEditable(false);
-		output.setFont(new Font("Courier New", Font.PLAIN, output.getFont().getSize()));
 
 		final JTextField saveLocation = new JTextField(30);
 		saveLocation.setText(mainWindow.getProject().getFilePath().toString());
@@ -118,6 +117,8 @@ public class ApkSpySaver extends JDialog {
 
 		add(buttons, BorderLayout.PAGE_START);
 		add(panel, BorderLayout.PAGE_END);
+
+		output.setFont(new Font("Courier New", Font.PLAIN, output.getFont().getSize()));
 
 		setTitle("Save APK");
 		pack();

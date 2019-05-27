@@ -8,12 +8,14 @@ import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import javax.swing.text.BadLocationException;
 
+import com.lucasbaizer.Util;
+
 import jadx.gui.treemodel.JClass;
 import jadx.gui.treemodel.TextNode;
 import jadx.gui.ui.ContentPanel;
 import jadx.gui.ui.EditMethodDialog;
-import jadx.gui.ui.MainWindow;
 import jadx.gui.ui.EditMethodDialog.EditParams;
+import jadx.gui.ui.MainWindow;
 import jadx.gui.utils.NLS;
 
 public class EditMethodAction extends AbstractAction implements PopupMenuListener {
@@ -116,7 +118,7 @@ public class EditMethodAction extends AbstractAction implements PopupMenuListene
 				}
 
 				if (line.startsWith("    ") && !line.startsWith("     ") && str.endsWith("{")) {
-					int closing = findClosingBracket(text, start + line.lastIndexOf('{'));
+					int closing = Util.findClosingBracket(text, start + line.lastIndexOf('{'));
 					if (offset > start && offset < closing) {
 						String method = text.substring(start, closing);
 						extraction.append(method);
@@ -134,25 +136,6 @@ public class EditMethodAction extends AbstractAction implements PopupMenuListene
 		}
 
 		return null;
-	}
-
-	private static int findClosingBracket(String expression, int index) {
-		if (expression.charAt(index) != '{') {
-			return -1;
-		}
-
-		int count = 0;
-		for (int i = index; i < expression.length(); i++) {
-			if (expression.charAt(i) == '{') {
-				count++;
-			} else if (expression.charAt(i) == '}') {
-				if (--count == 0) {
-					return i;
-				}
-			}
-		}
-
-		return -1;
 	}
 
 	@Override
