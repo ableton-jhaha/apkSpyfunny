@@ -8,8 +8,14 @@ apkSpy allows you to recompile individual methods of classes, so you can recompi
 * Currently you cannot edit Smali bytecode. This would be very useful, as you can edit a method even if that method itself does not compile.
 * You can only edit methods. It would be great to have support for editing member fields.
 * The ability to create and delete classes, as well as create and delete new methods.
+* Classes within the `android.*` packages cannot be edited.
 
 Below is the README for jadx.
+
+### How Use
+After compiling this project from source (there will be released in the future), load an APK, open up any class, right-click within a method and then click "Edit Method Java".
+
+To save your changes, first ensure your Android SDK path is set. You can find this by going in the menu bar `apkSpy -> Preferences`. Then, your changed can be recompiled by going to `apkSpy -> Save APK`. If all goes well, it should pop up saying the recompiling has been successful. You now have a patched APK!
 
 ## JADX
 
