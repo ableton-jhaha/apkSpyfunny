@@ -7,6 +7,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import javax.swing.JButton;
@@ -18,6 +19,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.text.DefaultCaret;
 
 import com.lucasbaizer.ApkSpy;
@@ -28,6 +30,8 @@ public class ApkSpySaver extends JDialog {
 	private static final long serialVersionUID = -2062775409291032261L;
 
 	public ApkSpySaver(MainWindow mainWindow) {
+		super(SwingUtilities.windowForComponent(mainWindow));
+
 		JPanel panel = new JPanel();
 
 		JTextArea output = new JTextArea();
@@ -85,6 +89,9 @@ public class ApkSpySaver extends JDialog {
 							if (success) {
 								JOptionPane.showMessageDialog(mainWindow, "Successfully created APK!", "apkSpy",
 										JOptionPane.INFORMATION_MESSAGE);
+								Files.delete(Paths.get(System.getProperty("java.io.tmpdir"), "apkSpy",
+										mainWindow.getProject().getFilePath().getFileName().toString().replace('.', '_')
+												+ "stub.jar"));
 								dispose();
 							} else {
 								cancel.setEnabled(true);
@@ -123,7 +130,8 @@ public class ApkSpySaver extends JDialog {
 		setTitle("Save APK");
 		pack();
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-		setModalityType(ModalityType.MODELESS);
+		setModalityType(ModalityType.APPLICATION_MODAL);
+		setModal(true);
 		setLocationRelativeTo(null);
 
 		generate.requestFocus();

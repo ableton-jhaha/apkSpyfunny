@@ -17,20 +17,6 @@ import org.apache.commons.io.FileUtils;
 import jadx.gui.utils.DiffMatchPatch;
 
 public class ApkSpy {
-	public static void main(String[] args) throws IOException, InterruptedException {
-		System.out.println(lint("output.apk", "com.chamberlain.android.liftmaster.myq.BitmapLoader",
-				new String(Files.readAllBytes(Paths.get("BitmapLoader.java"))), new OutputStream() {
-					@Override
-					public void write(int b) throws IOException {
-						System.out.print((char) b);
-					}
-				}));
-	}
-
-	private static class BooleanWrapper {
-		public boolean value;
-	}
-
 	public static boolean lint(String apk, String className, String content, OutputStream out)
 			throws IOException, InterruptedException {
 		System.out.println("Linting: " + apk);
@@ -48,8 +34,13 @@ public class ApkSpy {
 		Files.write(root.resolve(Paths.get("src", className.replace('.', File.separatorChar) + ".java")),
 				content.getBytes(StandardCharsets.UTF_8));
 
-		JarGenerator.generateStubJar(modifyingApk, Paths.get("project-lint", "libs", "stub.jar").toFile(), out,
-				classes);
+		Path stubPath = Paths.get(System.getProperty("java.io.tmpdir"), "apkSpy",
+				modifyingApk.getName().replace('.', '_') + "stub.jar");
+		if (!Files.exists(stubPath)) {
+			JarGenerator.generateStubJar(modifyingApk, stubPath.toFile(), out, classes);
+		}
+		Files.createDirectories(root.resolve("libs"));
+		Files.copy(stubPath, Paths.get("project-lint", "libs", "stub.jar"));
 		Files.copy(Paths.get("tools", "android.jar"), Paths.get("project-lint", "libs", "android.jar"));
 
 		Files.createDirectories(root.resolve("bin"));
@@ -65,26 +56,28 @@ public class ApkSpy {
 			}
 		}
 
-		BooleanWrapper wrapper = new BooleanWrapper();
-		Util.system(root.resolve("src").toFile(), new OutputStream() {
+		out.write("Started compile...\n".getBytes(StandardCharsets.UTF_8));
+		int code = Util.system(root.resolve("src").toFile(), new OutputStream() {
 			@Override
 			public void write(int b) throws IOException {
 				out.write(b);
-				wrapper.value = true;
 			}
 		}, javac == null ? "javac" : javac.toAbsolutePath().toString(), "-cp",
 				String.join(File.pathSeparator, String.join(File.separator, "..", "libs", "stub.jar"),
 						String.join(File.separator, "..", "libs", "android.jar")),
-				"-d", ".." + File.separator + "bin", "-Xlint:none",
-				className.replace('.', File.separatorChar) + ".java");
+				"-d", ".." + File.separator + "bin", className.replace('.', File.separatorChar) + ".java");
 
 		Util.attemptDelete(root.toFile());
 
-		return !wrapper.value;
+		return code == 0;
 	}
 
 	public static boolean merge(String apk, String outputLocation, String sdkPath, String applicationId,
 			Map<String, String> classes, OutputStream out) throws IOException, InterruptedException {
+		System.out.println(sdkPath);
+		sdkPath = sdkPath.replace("\\", "\\\\");
+		System.out.println(sdkPath);
+
 		System.out.println("Merging: " + apk);
 		File modifyingApk = new File(apk);
 
@@ -129,8 +122,12 @@ public class ApkSpy {
 			Files.write(newFile.toPath(), newFileContent.getBytes(StandardCharsets.UTF_8));
 		}
 
-		JarGenerator.generateStubJar(modifyingApk, Paths.get("project-temp", "app", "libs", "stub.jar").toFile(), out,
-				classes);
+		Path stubPath = Paths.get(System.getProperty("java.io.tmpdir"), "apkSpy",
+				modifyingApk.getName().replace('.', '_') + "stub.jar");
+		if (!Files.exists(stubPath)) {
+			JarGenerator.generateStubJar(modifyingApk, stubPath.toFile(), out, classes);
+		}
+		Files.copy(stubPath, Paths.get("project-temp", "app", "libs", "stub.jar"));
 
 		if (!Util.isWindows()) {
 			Runtime.getRuntime().exec("chmod +x project-temp/gradlew").waitFor();
