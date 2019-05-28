@@ -24,7 +24,14 @@ public class Util {
 	}
 
 	public static int system(File dir, OutputStream out, String... args) throws IOException, InterruptedException {
-		Process proc = new ProcessBuilder(args).directory(dir).redirectErrorStream(true).start();
+		ProcessBuilder builder = new ProcessBuilder(args).directory(dir).redirectErrorStream(true);
+		if (System.getenv("PATH") != null) {
+			builder.environment().put("PATH", System.getenv("PATH"));
+		}
+		if (System.getenv("Path") != null) {
+			builder.environment().put("Path", System.getenv("Path"));
+		}
+		Process proc = builder.start();
 
 		BufferedReader in = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 		String line;

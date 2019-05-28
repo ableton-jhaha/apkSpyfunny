@@ -4,6 +4,8 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
+import java.io.OutputStream;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -12,6 +14,7 @@ import javax.swing.JScrollPane;
 
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 
+import com.lucasbaizer.ApkSpy;
 import com.lucasbaizer.ChangeCache;
 
 import jadx.core.codegen.CodeWriter;
@@ -41,18 +44,7 @@ public class EditMethodDialog extends JDialog {
 		save.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				StringBuilder original = new StringBuilder(cls.getCls().getClassNode().getCode().getCodeStr());
-				String changed = EditMethodDialog.this.codeArea.getText();
-
-				String method = changed.substring(changed.indexOf("    "), changed.lastIndexOf('}') - 1);
-				original.delete(params.methodStart, params.methodEnd + 1);
-				original.insert(params.methodStart, method);
-
-				String head = changed.substring(0, changed.substring(0, changed.indexOf("class ")).lastIndexOf('\n'));
-				original.delete(params.headStart, params.headEnd);
-				original.insert(params.headStart, head);
-
-				String completed = original.toString();
+				String completed = merge(cls, params);
 
 				CodeWriter writer = new CodeWriter();
 				writer.add(completed);
@@ -76,8 +68,26 @@ public class EditMethodDialog extends JDialog {
 				dispose();
 			}
 		});
+		JButton compile = new JButton("Compile");
+		compile.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					ApkSpy.lint(mainWindow.getProject().getFilePath().toString(), cls.getFullName(), cls.getContent(),
+							new OutputStream() {
+								@Override
+								public void write(int b) throws IOException {
+									System.out.print((char) b);
+								}
+							});
+				} catch (IOException | InterruptedException ex) {
+					ex.printStackTrace();
+				}
+			}
+		});
 
 		JPanel buttons = new JPanel();
+		buttons.add(compile);
 		buttons.add(save);
 		buttons.add(cancel);
 
@@ -95,6 +105,21 @@ public class EditMethodDialog extends JDialog {
 		this.codeArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
 
 		this.codeArea.requestFocus();
+	}
+
+	String merge(JClass cls, EditParams params) {
+		StringBuilder original = new StringBuilder(cls.getCls().getClassNode().getCode().getCodeStr());
+		String changed = EditMethodDialog.this.codeArea.getText();
+
+		String method = changed.substring(changed.indexOf("    "), changed.lastIndexOf('}') - 1);
+		original.delete(params.methodStart, params.methodEnd + 1);
+		original.insert(params.methodStart, method);
+
+		String head = changed.substring(0, changed.substring(0, changed.indexOf("class ")).lastIndexOf('\n'));
+		original.delete(params.headStart, params.headEnd);
+		original.insert(params.headStart, head);
+
+		return original.toString();
 	}
 
 	public void setCodeAreaContent(String content) {

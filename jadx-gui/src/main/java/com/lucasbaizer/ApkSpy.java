@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -16,6 +17,72 @@ import org.apache.commons.io.FileUtils;
 import jadx.gui.utils.DiffMatchPatch;
 
 public class ApkSpy {
+	public static void main(String[] args) throws IOException, InterruptedException {
+		System.out.println(lint("output.apk", "com.chamberlain.android.liftmaster.myq.BitmapLoader",
+				new String(Files.readAllBytes(Paths.get("BitmapLoader.java"))), new OutputStream() {
+					@Override
+					public void write(int b) throws IOException {
+						System.out.print((char) b);
+					}
+				}));
+	}
+
+	private static class BooleanWrapper {
+		public boolean value;
+	}
+
+	public static boolean lint(String apk, String className, String content, OutputStream out)
+			throws IOException, InterruptedException {
+		System.out.println("Linting: " + apk);
+		File modifyingApk = new File(apk);
+		Path root = Paths.get("project-lint");
+		Map<String, String> classes = Collections.singletonMap(className, content);
+
+		Util.attemptDelete(root.toFile());
+
+		String pkg = className.substring(0, className.lastIndexOf('.'));
+		Path folder = root.resolve(Paths.get("src", pkg.replace('.', File.separatorChar)));
+		if (!Files.isDirectory(folder)) {
+			Files.createDirectories(folder);
+		}
+		Files.write(root.resolve(Paths.get("src", className.replace('.', File.separatorChar) + ".java")),
+				content.getBytes(StandardCharsets.UTF_8));
+
+		JarGenerator.generateStubJar(modifyingApk, Paths.get("project-lint", "libs", "stub.jar").toFile(), out,
+				classes);
+		Files.copy(Paths.get("tools", "android.jar"), Paths.get("project-lint", "libs", "android.jar"));
+
+		Files.createDirectories(root.resolve("bin"));
+
+		Path javac = null;
+		if (System.getenv("JAVA_HOME") != null) {
+			javac = Paths.get(System.getenv("JAVA_HOME"), "bin", "javac");
+			if (!Files.isExecutable(javac)) {
+				javac = javac.getParent().resolve("javac.exe");
+				if (!Files.isExecutable(javac)) {
+					javac = null;
+				}
+			}
+		}
+
+		BooleanWrapper wrapper = new BooleanWrapper();
+		Util.system(root.resolve("src").toFile(), new OutputStream() {
+			@Override
+			public void write(int b) throws IOException {
+				out.write(b);
+				wrapper.value = true;
+			}
+		}, javac == null ? "javac" : javac.toAbsolutePath().toString(), "-cp",
+				String.join(File.pathSeparator, String.join(File.separator, "..", "libs", "stub.jar"),
+						String.join(File.separator, "..", "libs", "android.jar")),
+				"-d", ".." + File.separator + "bin", "-Xlint:none",
+				className.replace('.', File.separatorChar) + ".java");
+
+		Util.attemptDelete(root.toFile());
+
+		return !wrapper.value;
+	}
+
 	public static boolean merge(String apk, String outputLocation, String sdkPath, String applicationId,
 			Map<String, String> classes, OutputStream out) throws IOException, InterruptedException {
 		System.out.println("Merging: " + apk);
