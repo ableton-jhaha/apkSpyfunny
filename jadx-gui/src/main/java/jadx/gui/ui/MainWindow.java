@@ -19,6 +19,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -62,6 +63,7 @@ import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
+import org.apache.commons.io.FileUtils;
 import org.fife.ui.rsyntaxtextarea.Theme;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -366,6 +368,13 @@ public class MainWindow extends JFrame {
 		int threadsCount = settings.getThreadsCount();
 		cacheObject.setDecompileJob(new DecompileJob(wrapper, threadsCount));
 		cacheObject.setIndexJob(new IndexJob(wrapper, cacheObject, threadsCount));
+
+		try {
+			FileUtils.deleteDirectory(Paths.get(System.getProperty("java.io.tmpdir"), "apkSpy").toFile());
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
 	}
 
 	private synchronized void runBackgroundJobs() {

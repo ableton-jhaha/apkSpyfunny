@@ -24,8 +24,7 @@ public class JadxProject {
 	public static final String PROJECT_EXTENSION = "jadx";
 
 	private static final Gson GSON = new GsonBuilder()
-			.registerTypeHierarchyAdapter(Path.class, PathTypeAdapter.singleton())
-			.create();
+			.registerTypeHierarchyAdapter(Path.class, PathTypeAdapter.singleton()).create();
 
 	private transient JadxSettings settings;
 	private transient String name = "New Project";

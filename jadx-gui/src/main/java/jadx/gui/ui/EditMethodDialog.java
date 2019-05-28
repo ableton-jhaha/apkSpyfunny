@@ -11,6 +11,8 @@ import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.SwingUtilities;
 
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 
@@ -30,6 +32,8 @@ public class EditMethodDialog extends JDialog {
 
 	public EditMethodDialog(MainWindow mainWindow, JNode jnode, JClass cls, AbstractCodeArea selectedCodeArea,
 			EditParams params) {
+		super(SwingUtilities.windowForComponent(mainWindow));
+
 		JPanel content = new JPanel();
 
 		TabbedPane pane = new TabbedPane(mainWindow);
@@ -40,23 +44,30 @@ public class EditMethodDialog extends JDialog {
 		pane.add(scroll);
 		content.add(pane);
 
+		JTextArea output = new JTextArea();
+		JScrollPane scroll2 = new JScrollPane(output);
+		Dimension size = scroll.getPreferredSize();
+		size.width /= 2;
+		scroll2.setPreferredSize(size);
+		content.add(scroll2);
+
 		JButton save = new JButton("Save");
 		save.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				String completed = merge(cls, params);
+				MergeResult completed = merge(cls, params);
 
 				CodeWriter writer = new CodeWriter();
-				writer.add(completed);
+				writer.add(completed.result);
 				writer = writer.finish();
 				cls.getCls().getClassNode().setCode(writer);
 
 				int caret = selectedCodeArea.getCaretPosition();
-				selectedCodeArea.setText(completed);
+				selectedCodeArea.setText(completed.result);
 
 				selectedCodeArea.setCaretPosition(caret);
 
-				ChangeCache.putChange(cls.getFullName(), changed, head, method);
+				ChangeCache.putChange(cls.getFullName(), completed.changed, completed.head, completed.method);
 
 				dispose();
 			}
@@ -72,17 +83,31 @@ public class EditMethodDialog extends JDialog {
 		compile.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				try {
-					ApkSpy.lint(mainWindow.getProject().getFilePath().toString(), cls.getFullName(), cls.getContent(),
-							new OutputStream() {
-								@Override
-								public void write(int b) throws IOException {
-									System.out.print((char) b);
-								}
-							});
-				} catch (IOException | InterruptedException ex) {
-					ex.printStackTrace();
-				}
+				output.setText("");
+
+				Thread thread = new Thread(new Runnable() {
+					@Override
+					public void run() {
+						try {
+							if (ApkSpy.lint(mainWindow.getProject().getFilePath().toString(), cls.getFullName(),
+									EditMethodDialog.this.codeArea.getText(), new OutputStream() {
+										@Override
+										public void write(int b) throws IOException {
+											System.out.print((char) b);
+											output.append(Character.toString((char) b));
+										}
+									})) {
+								output.append("Successfully compiled!\n");
+							} else {
+								output.append("Encounted errors while compiling!\n");
+							}
+						} catch (IOException | InterruptedException ex) {
+							ex.printStackTrace();
+						}
+					}
+				});
+				thread.start();
+
 			}
 		});
 
@@ -97,7 +122,8 @@ public class EditMethodDialog extends JDialog {
 		setTitle("Edit Method");
 		pack();
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-		setModalityType(ModalityType.MODELESS);
+		setModalityType(ModalityType.APPLICATION_MODAL);
+		setModal(true);
 		setLocationRelativeTo(null);
 
 		this.codeArea = codeArea.getCodeArea();
@@ -107,9 +133,9 @@ public class EditMethodDialog extends JDialog {
 		this.codeArea.requestFocus();
 	}
 
-	String merge(JClass cls, EditParams params) {
+	MergeResult merge(JClass cls, EditParams params) {
 		StringBuilder original = new StringBuilder(cls.getCls().getClassNode().getCode().getCodeStr());
-		String changed = EditMethodDialog.this.codeArea.getText();
+		String changed = codeArea.getText();
 
 		String method = changed.substring(changed.indexOf("    "), changed.lastIndexOf('}') - 1);
 		original.delete(params.methodStart, params.methodEnd + 1);
@@ -119,11 +145,25 @@ public class EditMethodDialog extends JDialog {
 		original.delete(params.headStart, params.headEnd);
 		original.insert(params.headStart, head);
 
-		return original.toString();
+		return new MergeResult(changed, head, method, original.toString());
 	}
 
 	public void setCodeAreaContent(String content) {
 		codeArea.setText(content);
+	}
+
+	private static class MergeResult {
+		public String changed;
+		public String head;
+		public String method;
+		public String result;
+
+		public MergeResult(String changed, String head, String method, String result) {
+			this.changed = changed;
+			this.head = head;
+			this.method = method;
+			this.result = result;
+		}
 	}
 
 	public static class EditParams {
