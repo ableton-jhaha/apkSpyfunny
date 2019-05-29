@@ -3,16 +3,20 @@ package com.lucasbaizer;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
+
 import jadx.gui.utils.DiffMatchPatch;
 import jadx.gui.utils.DiffMatchPatch.Diff;
 
 public class ClassBreakdown implements Cloneable {
+	private String className;
 	private String imports;
 	private String classDeclaration;
 	private String memberVariables;
+	private List<String> changedMethods;
 	private List<String> methods;
 
-	public static ClassBreakdown breakdown(String content) {
+	public static ClassBreakdown breakdown(String className, String content) {
 		String[] split = content.split("\n");
 
 		String imports = "";
@@ -20,25 +24,29 @@ public class ClassBreakdown implements Cloneable {
 		String memberVariables = "";
 		List<String> methods = new ArrayList<>();
 		String currentMethod = "";
+		boolean allowRoot = true;
 		for (String line : split) {
-			if (!line.startsWith(" ")) {
-				if (line.contains("class ")) {
-					classDeclaration = line.substring(0, line.indexOf("{")).trim();
-				} else {
-					imports += line.trim() + "\n";
+			if (allowRoot) {
+				if (!line.startsWith(" ")) {
+					if (line.contains("class ")) {
+						classDeclaration = line.substring(0, line.indexOf("{")).trim();
+						allowRoot = false;
+					} else {
+						imports += line.trim() + "\n";
+					}
 				}
 			} else {
 				if (line.startsWith("    ") && !line.startsWith("     ")) {
 					if (line.trim().equals("}")) {
-						methods.add(currentMethod);
+						methods.add(currentMethod.trim() + "\n}");
 						currentMethod = "";
-					} else if (line.endsWith(";")) {
+					} else if (line.trim().endsWith(";")) {
 						memberVariables += line.trim() + "\n";
 					} else {
-						currentMethod += line.substring(4);
+						currentMethod += StringUtils.stripEnd(line.substring(4), "\r\n ") + "\n";
 					}
-				} else {
-					currentMethod += line.substring(4);
+				} else if (line.startsWith("     ")) {
+					currentMethod += StringUtils.stripEnd(line.substring(4), "\r\n ") + "\n";
 				}
 			}
 		}
@@ -47,14 +55,26 @@ public class ClassBreakdown implements Cloneable {
 			methods.add(currentMethod);
 		}
 
-		return new ClassBreakdown(imports, classDeclaration, memberVariables, methods);
+		return new ClassBreakdown(imports, classDeclaration, className, memberVariables, methods);
 	}
 
-	public ClassBreakdown(String imports, String classDeclaration, String memberVariables, List<String> methods) {
+	public ClassBreakdown(String imports, String classDeclaration, String className, String memberVariables,
+			List<String> methods) {
 		this.imports = imports;
 		this.classDeclaration = classDeclaration;
+		this.className = className;
 		this.memberVariables = memberVariables;
 		this.methods = methods;
+		this.changedMethods = methods;
+	}
+
+	public ClassBreakdown(ClassBreakdown old) {
+		this.imports = old.imports;
+		this.classDeclaration = old.classDeclaration;
+		this.className = old.className;
+		this.memberVariables = old.memberVariables;
+		this.methods = new ArrayList<>(old.methods);
+		this.changedMethods = new ArrayList<>(old.changedMethods);
 	}
 
 	public String getImports() {
@@ -89,8 +109,24 @@ public class ClassBreakdown implements Cloneable {
 		this.methods = methods;
 	}
 
+	public String getClassName() {
+		return className;
+	}
+
+	public void setClassName(String className) {
+		this.className = className;
+	}
+
+	public List<String> getChangedMethods() {
+		return changedMethods;
+	}
+
+	public void setChangedMethods(List<String> methods) {
+		this.changedMethods = methods;
+	}
+
 	public ClassBreakdown addOrReplaceMethod(String newMethod) {
-		ClassBreakdown clone = this.clone();
+		ClassBreakdown clone = new ClassBreakdown(this);
 
 		String header = newMethod.trim().split("\n")[0].trim();
 		for (int i = 0; i < methods.size(); i++) {
@@ -109,7 +145,7 @@ public class ClassBreakdown implements Cloneable {
 		DiffMatchPatch dmp = new DiffMatchPatch();
 		List<Diff> diffs = dmp.diffMain(this.imports, imports);
 
-		ClassBreakdown clone = this.clone();
+		ClassBreakdown clone = new ClassBreakdown(this);
 		clone.imports = dmp.diffText2(diffs);
 		return clone;
 	}
@@ -118,17 +154,17 @@ public class ClassBreakdown implements Cloneable {
 		DiffMatchPatch dmp = new DiffMatchPatch();
 		List<Diff> diffs = dmp.diffMain(this.memberVariables, memberVariables);
 
-		ClassBreakdown clone = this.clone();
+		ClassBreakdown clone = new ClassBreakdown(this);
 		clone.memberVariables = dmp.diffText2(diffs);
 		return clone;
 	}
 
 	public ClassBreakdown mergeMethodStubs(List<String> methods) {
-		ClassBreakdown clone = this.clone();
+		ClassBreakdown clone = new ClassBreakdown(this);
 		outer: for (String newMethod : methods) {
 			String header = newMethod.trim().split("\n")[0].trim();
-			for (int i = 0; i < methods.size(); i++) {
-				String otherHeader = methods.get(i).split("\n")[0].trim();
+			for (int i = 0; i < this.methods.size(); i++) {
+				String otherHeader = this.methods.get(i).split("\n")[0].trim();
 				if (header.equals(otherHeader)) {
 					continue outer;
 				}
@@ -148,7 +184,8 @@ public class ClassBreakdown implements Cloneable {
 				stub += "    return ' ';\n";
 			} else if (containing.contains("boolean ")) {
 				stub += "    return false;\n";
-			} else if (containing.contains("void ")) {
+			} else if (containing.contains("void ")
+					|| containing.contains(this.className.substring(this.className.lastIndexOf('.') + 1))) {
 				stub += "    return;\n";
 			} else {
 				stub += "    return null;\n";
@@ -160,9 +197,9 @@ public class ClassBreakdown implements Cloneable {
 		return clone;
 	}
 
-	public ClassBreakdown accept(ClassBreakdown other) {
-		ClassBreakdown breakdown = this.mergeImports(other.imports).mergeMemberVariables(other.memberVariables);
-		for (String method : other.methods) {
+	public ClassBreakdown mergeMethods(List<String> methods) {
+		ClassBreakdown breakdown = new ClassBreakdown(this);
+		for (String method : methods) {
 			breakdown = breakdown.addOrReplaceMethod(method);
 		}
 		return breakdown;
@@ -170,25 +207,20 @@ public class ClassBreakdown implements Cloneable {
 
 	@Override
 	public String toString() {
-		String str = this.imports + "\n";
-		str += this.classDeclaration + " {\n";
-		for (String member : this.memberVariables.split("\n")) {
-			str += "    " + member + "\n";
+		StringBuilder str = new StringBuilder(this.imports);
+		str.append(this.classDeclaration + " {\n");
+		if (this.memberVariables.length() > 0) {
+			for (String member : this.memberVariables.split("\n")) {
+				str.append("    " + member + "\n");
+			}
+			str.append("\n");
 		}
-		str += "\n";
 		for (String method : this.methods) {
 			for (String split : method.split("\n")) {
-				str += "    " + split + "\n";
+				str.append("    " + split + "\n");
 			}
-			str += "    }\n\n";
+			str.append("\n");
 		}
-		str += "}";
-		return str;
-	}
-
-	@Override
-	public ClassBreakdown clone() {
-		return new ClassBreakdown(this.imports, this.classDeclaration, this.memberVariables,
-				new ArrayList<>(this.methods));
+		return str.toString().substring(0, str.length() - 1) + "}";
 	}
 }

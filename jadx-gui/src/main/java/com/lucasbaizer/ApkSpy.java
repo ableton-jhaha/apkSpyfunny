@@ -17,32 +17,11 @@ import org.apache.commons.io.FileUtils;
 import jadx.gui.utils.DiffMatchPatch;
 
 public class ApkSpy {
-	public static void main(String[] args) {
-		String str = 
-		"package org.json;\n" +
-		"\n" +
-		"import org.json.Something;\n" +
-		"import org.json.SomethingElse;\n" +
-		"\n" +
-		"public class Other {\n" +
-		"    public boolean x = false;\n" +
-		"    public String y = \"Hello, World!\";\n" +
-		"\n" +
-		"    public static void main(String[] args) {\n" +
-		"        System.out.println(0);\n" +
-		"    }\n" +
-		"\n" +
-		"    public void doSomething() {\n" +
-		"    }\n" +
-		"}";
-		System.out.println(ClassBreakdown.breakdown(str));
-	}
-	
 	public static boolean lint(String apk, String className, ClassBreakdown content, OutputStream out)
 			throws IOException, InterruptedException {
 		System.out.println("Linting: " + apk);
 		File modifyingApk = new File(apk);
-		Path root = Paths.get("project-lint");
+		Path root = Paths.get("project-tmp");
 		Map<String, ClassBreakdown> classes = Collections.singletonMap(className, content);
 
 		Util.attemptDelete(root.toFile());
@@ -61,8 +40,8 @@ public class ApkSpy {
 			JarGenerator.generateStubJar(modifyingApk, stubPath.toFile(), out, classes);
 		}
 		Files.createDirectories(root.resolve("libs"));
-		Files.copy(stubPath, Paths.get("project-lint", "libs", "stub.jar"));
-		Files.copy(Paths.get("tools", "android.jar"), Paths.get("project-lint", "libs", "android.jar"));
+		Files.copy(stubPath, Paths.get("project-tmp", "libs", "stub.jar"));
+		Files.copy(Paths.get("tools", "android.jar"), Paths.get("project-tmp", "libs", "android.jar"));
 
 		Files.createDirectories(root.resolve("bin"));
 
@@ -102,21 +81,21 @@ public class ApkSpy {
 		System.out.println("Merging: " + apk);
 		File modifyingApk = new File(apk);
 
-		Util.attemptDelete(new File("project-temp"));
+		Util.attemptDelete(new File("project-tmp"));
 		Util.attemptDelete(new File("smali"));
 
-		FileUtils.copyDirectory(new File("default"), new File("project-temp"));
+		FileUtils.copyDirectory(new File("default"), new File("project-tmp"));
 
-		Files.write(Paths.get("project-temp", "local.properties"),
+		Files.write(Paths.get("project-tmp", "local.properties"),
 				("sdk.dir=" + sdkPath).getBytes(StandardCharsets.UTF_8));
 
-		Path gradleBuildPath = Paths.get("project-temp", "app", "build.gradle");
+		Path gradleBuildPath = Paths.get("project-tmp", "app", "build.gradle");
 		String buildGradle = new String(Files.readAllBytes(gradleBuildPath), StandardCharsets.UTF_8);
 		buildGradle = buildGradle.replace("$APPLICATION_ID", applicationId);
 
 		Files.write(gradleBuildPath, buildGradle.getBytes(StandardCharsets.UTF_8));
 
-		Path manifestPath = Paths.get("project-temp", "app", "src", "main", "AndroidManifest.xml");
+		Path manifestPath = Paths.get("project-tmp", "app", "src", "main", "AndroidManifest.xml");
 		String manifest = new String(Files.readAllBytes(manifestPath), StandardCharsets.UTF_8);
 		manifest = manifest.replace("$APPLICATION_ID", applicationId);
 
@@ -127,7 +106,7 @@ public class ApkSpy {
 			ClassBreakdown content = entry.getValue();
 
 			File toCompile = new File(className.substring(className.lastIndexOf('.') + 1) + ".java");
-			File completePath = Paths.get("project-temp", "app", "src", "main", "java",
+			File completePath = Paths.get("project-tmp", "app", "src", "main", "java",
 					className.substring(0, className.lastIndexOf('.')).replace(".", File.separator)).toFile();
 			completePath.mkdirs();
 
@@ -148,26 +127,29 @@ public class ApkSpy {
 		if (!Files.exists(stubPath)) {
 			JarGenerator.generateStubJar(modifyingApk, stubPath.toFile(), out, classes);
 		}
-		Files.copy(stubPath, Paths.get("project-temp", "app", "libs", "stub.jar"));
+		Files.createDirectories(Paths.get("project-tmp", "app", "libs"));
+		Files.copy(stubPath, Paths.get("project-tmp", "app", "libs", "stub.jar"));
 
 		if (!Util.isWindows()) {
-			Runtime.getRuntime().exec("chmod +x project-temp/gradlew").waitFor();
+			Runtime.getRuntime().exec("chmod +x project-tmp/gradlew").waitFor();
 		}
 
-		if (Util.system(new File("project-temp"), out, new File("project-temp").getAbsolutePath() + File.separator
+		if (Util.system(new File("project-tmp"), out, new File("project-tmp").getAbsolutePath() + File.separator
 				+ (Util.isWindows() ? "gradlew.bat" : "gradlew"), "build") != 0) {
-			Util.attemptDelete(new File("project-temp"));
+			Util.attemptDelete(new File("project-tmp"));
 			return false;
 		}
 
-		Files.move(Paths.get("project-temp", "app", "build", "outputs", "apk", "debug", "app-debug.apk"),
+		Files.move(Paths.get("project-tmp", "app", "build", "outputs", "apk", "debug", "app-debug.apk"),
 				Paths.get("generated.apk"), StandardCopyOption.REPLACE_EXISTING);
-		Util.attemptDelete(new File("project-temp"));
+		Util.attemptDelete(new File("project-tmp"));
 
 		ApktoolWrapper.decode(Paths.get("generated.apk"), "generated", false, out);
 		Files.delete(Paths.get("generated.apk"));
 
 		ApktoolWrapper.decode(modifyingApk.toPath(), "original", true, out);
+
+		System.exit(0);
 
 		DiffMatchPatch dmp = new DiffMatchPatch();
 
