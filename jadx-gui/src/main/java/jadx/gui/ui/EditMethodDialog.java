@@ -18,6 +18,7 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 
 import com.lucasbaizer.ApkSpy;
 import com.lucasbaizer.ChangeCache;
+import com.lucasbaizer.ClassBreakdown;
 
 import jadx.core.codegen.CodeWriter;
 import jadx.gui.treemodel.JClass;
@@ -55,19 +56,23 @@ public class EditMethodDialog extends JDialog {
 		save.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				MergeResult completed = merge(cls, params);
+				ClassBreakdown original = ClassBreakdown.breakdown(cls.getContent());
+				ClassBreakdown changed = ClassBreakdown.breakdown(EditMethodDialog.this.codeArea.getText());
+
+				ClassBreakdown completed = original.accept(changed);
 
 				CodeWriter writer = new CodeWriter();
-				writer.add(completed.result);
+				writer.add(completed.toString());
 				writer = writer.finish();
 				cls.getCls().getClassNode().setCode(writer);
 
 				int caret = selectedCodeArea.getCaretPosition();
-				selectedCodeArea.setText(completed.result);
+				selectedCodeArea.setText(completed.toString());
 
 				selectedCodeArea.setCaretPosition(caret);
 
-				ChangeCache.putChange(cls.getFullName(), completed.changed, completed.head, completed.method);
+				ChangeCache.putChange(cls.getFullName(), changed.mergeMemberVariables(original.getMemberVariables())
+						.mergeMethodStubs(original.getMethods()), changed.getMethods().get(0));
 
 				dispose();
 			}
@@ -89,8 +94,13 @@ public class EditMethodDialog extends JDialog {
 					@Override
 					public void run() {
 						try {
+							ClassBreakdown original = ClassBreakdown.breakdown(cls.getContent());
+							ClassBreakdown changed = ClassBreakdown.breakdown(EditMethodDialog.this.codeArea.getText());
+
 							if (ApkSpy.lint(mainWindow.getProject().getFilePath().toString(), cls.getFullName(),
-									EditMethodDialog.this.codeArea.getText(), new OutputStream() {
+									changed.mergeMemberVariables(original.getMemberVariables())
+											.mergeMethodStubs(original.getMethods()),
+									new OutputStream() {
 										@Override
 										public void write(int b) throws IOException {
 											System.out.print((char) b);
@@ -133,37 +143,8 @@ public class EditMethodDialog extends JDialog {
 		this.codeArea.requestFocus();
 	}
 
-	MergeResult merge(JClass cls, EditParams params) {
-		StringBuilder original = new StringBuilder(cls.getCls().getClassNode().getCode().getCodeStr());
-		String changed = codeArea.getText();
-
-		String method = changed.substring(changed.indexOf("    "), changed.lastIndexOf('}') - 1);
-		original.delete(params.methodStart, params.methodEnd + 1);
-		original.insert(params.methodStart, method);
-
-		String head = changed.substring(0, changed.substring(0, changed.indexOf("class ")).lastIndexOf('\n'));
-		original.delete(params.headStart, params.headEnd);
-		original.insert(params.headStart, head);
-
-		return new MergeResult(changed, head, method, original.toString());
-	}
-
 	public void setCodeAreaContent(String content) {
 		codeArea.setText(content);
-	}
-
-	private static class MergeResult {
-		public String changed;
-		public String head;
-		public String method;
-		public String result;
-
-		public MergeResult(String changed, String head, String method, String result) {
-			this.changed = changed;
-			this.head = head;
-			this.method = method;
-			this.result = result;
-		}
 	}
 
 	public static class EditParams {

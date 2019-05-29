@@ -17,12 +17,33 @@ import org.apache.commons.io.FileUtils;
 import jadx.gui.utils.DiffMatchPatch;
 
 public class ApkSpy {
-	public static boolean lint(String apk, String className, String content, OutputStream out)
+	public static void main(String[] args) {
+		String str = 
+		"package org.json;\n" +
+		"\n" +
+		"import org.json.Something;\n" +
+		"import org.json.SomethingElse;\n" +
+		"\n" +
+		"public class Other {\n" +
+		"    public boolean x = false;\n" +
+		"    public String y = \"Hello, World!\";\n" +
+		"\n" +
+		"    public static void main(String[] args) {\n" +
+		"        System.out.println(0);\n" +
+		"    }\n" +
+		"\n" +
+		"    public void doSomething() {\n" +
+		"    }\n" +
+		"}";
+		System.out.println(ClassBreakdown.breakdown(str));
+	}
+	
+	public static boolean lint(String apk, String className, ClassBreakdown content, OutputStream out)
 			throws IOException, InterruptedException {
 		System.out.println("Linting: " + apk);
 		File modifyingApk = new File(apk);
 		Path root = Paths.get("project-lint");
-		Map<String, String> classes = Collections.singletonMap(className, content);
+		Map<String, ClassBreakdown> classes = Collections.singletonMap(className, content);
 
 		Util.attemptDelete(root.toFile());
 
@@ -32,7 +53,7 @@ public class ApkSpy {
 			Files.createDirectories(folder);
 		}
 		Files.write(root.resolve(Paths.get("src", className.replace('.', File.separatorChar) + ".java")),
-				content.getBytes(StandardCharsets.UTF_8));
+				content.toString().getBytes(StandardCharsets.UTF_8));
 
 		Path stubPath = Paths.get(System.getProperty("java.io.tmpdir"), "apkSpy",
 				modifyingApk.getName().replace('.', '_') + "stub.jar");
@@ -73,7 +94,7 @@ public class ApkSpy {
 	}
 
 	public static boolean merge(String apk, String outputLocation, String sdkPath, String applicationId,
-			Map<String, String> classes, OutputStream out) throws IOException, InterruptedException {
+			Map<String, ClassBreakdown> classes, OutputStream out) throws IOException, InterruptedException {
 		System.out.println(sdkPath);
 		sdkPath = sdkPath.replace("\\", "\\\\");
 		System.out.println(sdkPath);
@@ -101,9 +122,9 @@ public class ApkSpy {
 
 		Files.write(manifestPath, manifest.getBytes(StandardCharsets.UTF_8));
 
-		for (Map.Entry<String, String> entry : classes.entrySet()) {
+		for (Map.Entry<String, ClassBreakdown> entry : classes.entrySet()) {
 			String className = entry.getKey();
-			String content = entry.getValue();
+			ClassBreakdown content = entry.getValue();
 
 			File toCompile = new File(className.substring(className.lastIndexOf('.') + 1) + ".java");
 			File completePath = Paths.get("project-temp", "app", "src", "main", "java",
@@ -111,7 +132,7 @@ public class ApkSpy {
 			completePath.mkdirs();
 
 			File newFile = new File(completePath, "ApkSpy_" + toCompile.getName());
-			Files.write(newFile.toPath(), content.getBytes(StandardCharsets.UTF_8));
+			Files.write(newFile.toPath(), content.toString().getBytes(StandardCharsets.UTF_8));
 
 			String simpleName = className.substring(className.lastIndexOf('.') + 1);
 			String newFileContent = new String(Files.readAllBytes(newFile.toPath()), StandardCharsets.UTF_8);

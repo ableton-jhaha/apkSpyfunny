@@ -27,7 +27,7 @@ import org.objectweb.asm.tree.InnerClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
 public class JarGenerator {
-	public static void generateStubJar(File apk, File output, OutputStream out, Map<String, String> classes)
+	public static void generateStubJar(File apk, File output, OutputStream out, Map<String, ClassBreakdown> classes)
 			throws IOException, InterruptedException {
 		Util.attemptDelete(new File("decompiled-apk"));
 
@@ -67,7 +67,7 @@ public class JarGenerator {
 	}
 
 	@SuppressWarnings("unchecked")
-	private static void visitClass(JarFile jarFile, JarEntry entry, Path tmpDir, Map<String, String> classes)
+	private static void visitClass(JarFile jarFile, JarEntry entry, Path tmpDir, Map<String, ClassBreakdown> classes)
 			throws IOException {
 		ClassNode classNode = new ClassNode();
 
