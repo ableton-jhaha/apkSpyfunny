@@ -56,10 +56,12 @@ public class EditMethodDialog extends JDialog {
 		save.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				ClassBreakdown original = ClassBreakdown.breakdown(cls.getContent());
-				ClassBreakdown changed = ClassBreakdown.breakdown(EditMethodDialog.this.codeArea.getText());
+				ClassBreakdown original = ClassBreakdown.breakdown(cls.getFullName(), cls.getContent());
+				ClassBreakdown changed = ClassBreakdown.breakdown(cls.getFullName(),
+						EditMethodDialog.this.codeArea.getText());
 
-				ClassBreakdown completed = original.accept(changed);
+				ClassBreakdown completed = original.mergeImports(changed.getImports())
+						.mergeMethods(changed.getChangedMethods());
 
 				CodeWriter writer = new CodeWriter();
 				writer.add(completed.toString());
@@ -94,8 +96,9 @@ public class EditMethodDialog extends JDialog {
 					@Override
 					public void run() {
 						try {
-							ClassBreakdown original = ClassBreakdown.breakdown(cls.getContent());
-							ClassBreakdown changed = ClassBreakdown.breakdown(EditMethodDialog.this.codeArea.getText());
+							ClassBreakdown original = ClassBreakdown.breakdown(cls.getFullName(), cls.getContent());
+							ClassBreakdown changed = ClassBreakdown.breakdown(cls.getFullName(),
+									EditMethodDialog.this.codeArea.getText());
 
 							if (ApkSpy.lint(mainWindow.getProject().getFilePath().toString(), cls.getFullName(),
 									changed.mergeMemberVariables(original.getMemberVariables())
