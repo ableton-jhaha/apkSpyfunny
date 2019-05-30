@@ -14,8 +14,6 @@ import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 
-import jadx.gui.utils.DiffMatchPatch;
-
 public class ApkSpy {
 	public static boolean lint(String apk, String className, ClassBreakdown content, OutputStream out)
 			throws IOException, InterruptedException {
@@ -140,7 +138,7 @@ public class ApkSpy {
 			return false;
 		}
 
-		Files.move(Paths.get("project-tmp", "app", "build", "outputs", "apk", "debug", "app-debug.apk"),
+		Files.copy(Paths.get("project-tmp", "app", "build", "outputs", "apk", "debug", "app-debug.apk"),
 				Paths.get("generated.apk"), StandardCopyOption.REPLACE_EXISTING);
 		Util.attemptDelete(new File("project-tmp"));
 
@@ -148,10 +146,6 @@ public class ApkSpy {
 		Files.delete(Paths.get("generated.apk"));
 
 		ApktoolWrapper.decode(modifyingApk.toPath(), "original", true, out);
-
-		System.exit(0);
-
-		DiffMatchPatch dmp = new DiffMatchPatch();
 
 		Files.walk(Paths.get("smali", "generated", "smali"))
 				.filter(path -> Files.isRegularFile(path) && path.getFileName().toString().startsWith("ApkSpy_"))
@@ -162,21 +156,25 @@ public class ApkSpy {
 										Paths.get("smali", "generated", "smali").toAbsolutePath().toString().length())
 										.replace("ApkSpy_", ""));
 						if (Files.exists(equivalent)) {
-							String originalContent = new String(Files.readAllBytes(equivalent), StandardCharsets.UTF_8);
 							String modifiedContent = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+							String originalContent = new String(Files.readAllBytes(equivalent), StandardCharsets.UTF_8);
 
 							modifiedContent = modifiedContent.replace("ApkSpy_", "");
 
-							List<DiffMatchPatch.Diff> diffs = dmp.diffMain(originalContent, modifiedContent);
-							StringBuilder output = new StringBuilder();
-							for (DiffMatchPatch.Diff diff : diffs) {
-								if (diff.operation == DiffMatchPatch.Operation.INSERT
-										|| diff.operation == DiffMatchPatch.Operation.EQUAL) {
-									output.append(diff.text);
-								}
+							SmaliBreakdown modifiedSmali = SmaliBreakdown.breakdown(modifiedContent);
+							List<SmaliMethod> methods = modifiedSmali.getChangedMethods(
+									classes.get(modifiedSmali.getClassName().replace("ApkSpy_", "")));
+
+							StringBuilder builder = new StringBuilder(originalContent);
+							for (SmaliMethod method : methods) {
+								SmaliBreakdown originalSmali = SmaliBreakdown.breakdown(builder.toString());
+								SmaliMethod equivalentMethod = originalSmali.getEquivalentMethod(method);
+
+								builder.delete(equivalentMethod.getStart(), equivalentMethod.getEnd());
+								builder.insert(equivalentMethod.getStart(), method.getContent());
 							}
 
-							Files.write(equivalent, output.toString().getBytes(StandardCharsets.UTF_8));
+							Files.write(equivalent, builder.toString().getBytes(StandardCharsets.UTF_8));
 						} else {
 							Files.copy(path, equivalent);
 						}
