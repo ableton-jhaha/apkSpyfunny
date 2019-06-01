@@ -86,6 +86,7 @@ import jadx.gui.treemodel.JNode;
 import jadx.gui.treemodel.JPackage;
 import jadx.gui.treemodel.JResource;
 import jadx.gui.treemodel.JRoot;
+import jadx.gui.treemodel.TextNode;
 import jadx.gui.update.JadxUpdate;
 import jadx.gui.update.JadxUpdate.IUpdateCallback;
 import jadx.gui.update.data.Release;
@@ -1062,10 +1063,14 @@ public class MainWindow extends JFrame {
 
 	private class JPackagePopUp extends JPopupMenu {
 		JMenuItem excludeItem = new JCheckBoxMenuItem(NLS.str("popup.exclude"));
+		JMenuItem addClassItem = new JCheckBoxMenuItem(NLS.str("popup.add_class"));
 
 		public JPackagePopUp(JPackage pkg) {
 			excludeItem.setSelected(!pkg.isEnabled());
+			addClassItem.setEnabled(pkg.isEnabled());
+
 			add(excludeItem);
+			add(addClassItem);
 			excludeItem.addItemListener(e -> {
 				String fullName = pkg.getFullName();
 				if (excludeItem.isSelected()) {
@@ -1074,6 +1079,25 @@ public class MainWindow extends JFrame {
 					wrapper.removeExcludedPackage(fullName);
 				}
 				reOpenFile();
+			});
+			addClassItem.addItemListener(e -> {
+				StringBuilder pkgName = new StringBuilder();
+				pkgName.append(pkg.getName());
+				JNode node = (JNode) pkg.getParent();
+				while (node instanceof JPackage) {
+					pkgName.insert(0, ((JPackage) node).getName() + ".");
+					node = (JNode) node.getParent();
+				}
+
+				StringBuilder builder = new StringBuilder();
+				builder.append("package " + pkgName.toString() + ";\n\n");
+				builder.append("public class MyClass {\n");
+				builder.append("    \n");
+				builder.append("}\n");
+
+				String toStr = builder.toString();
+
+				new AddClassDialog(MainWindow.this, new TextNode(toStr), toStr, pkgName.toString()).setVisible(true);
 			});
 		}
 	}

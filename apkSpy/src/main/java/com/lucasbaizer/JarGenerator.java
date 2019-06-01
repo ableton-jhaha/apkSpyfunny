@@ -66,7 +66,6 @@ public class JarGenerator {
 		Util.attemptDelete(tmpDir.toFile());
 	}
 
-	@SuppressWarnings("unchecked")
 	private static void visitClass(JarFile jarFile, JarEntry entry, Path tmpDir, Map<String, ClassBreakdown> classes)
 			throws IOException {
 		ClassNode classNode = new ClassNode();
@@ -81,7 +80,7 @@ public class JarGenerator {
 
 		ClassWriter writer = new ClassWriter(0);
 		writer.visit(classNode.version, classNode.access, classNode.name, classNode.signature, classNode.superName,
-				(String[]) classNode.interfaces.toArray(new String[0]));
+				classNode.interfaces.toArray(new String[0]));
 
 		List<FieldNode> fieldNodes = classNode.fields;
 		for (FieldNode fieldNode : fieldNodes) {
@@ -107,7 +106,7 @@ public class JarGenerator {
 				}
 			}
 			MethodVisitor visitor = writer.visitMethod(methodNode.access, methodNode.name, methodNode.desc,
-					methodNode.signature, (String[]) methodNode.exceptions.toArray(new String[0]));
+					methodNode.signature, methodNode.exceptions.toArray(new String[0]));
 
 			Type returnType = Type.getReturnType(methodNode.desc);
 

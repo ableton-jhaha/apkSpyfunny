@@ -90,6 +90,7 @@ spotless {
 			include 'jadx-cli/src/**/java/**/*.java'
 			include 'jadx-core/src/**/java/**/*.java'
 			include 'jadx-gui/src/**/java/**/*.java'
+			include 'apkSpy/src/**/java/**/*.java'
 		}
 
 		importOrderFile 'config/code-formatter/eclipse.importorder'

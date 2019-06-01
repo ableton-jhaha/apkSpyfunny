@@ -14,7 +14,6 @@ import jadx.gui.treemodel.JClass;
 import jadx.gui.treemodel.TextNode;
 import jadx.gui.ui.ContentPanel;
 import jadx.gui.ui.EditMethodDialog;
-import jadx.gui.ui.EditMethodDialog.EditParams;
 import jadx.gui.ui.MainWindow;
 import jadx.gui.utils.NLS;
 
@@ -28,7 +27,6 @@ public class EditMethodAction extends AbstractAction implements PopupMenuListene
 	private final transient JClass jCls;
 
 	private transient String determinedContent;
-	private transient EditParams params;
 
 	public EditMethodAction(int type, ContentPanel contentPanel, CodeArea codeArea, JClass jCls) {
 		super(NLS.str(type == JAVA ? "popup.edit_method_java" : "popup.edit_method_smali"));
@@ -46,7 +44,7 @@ public class EditMethodAction extends AbstractAction implements PopupMenuListene
 
 		MainWindow mainWindow = contentPanel.getTabbedPane().getMainWindow();
 
-		EditMethodDialog dialog = new EditMethodDialog(mainWindow, new TextNode(""), jCls, codeArea, params);
+		EditMethodDialog dialog = new EditMethodDialog(mainWindow, new TextNode(""), jCls, codeArea);
 		dialog.setCodeAreaContent(this.determinedContent);
 		dialog.setVisible(true);
 
@@ -90,7 +88,6 @@ public class EditMethodAction extends AbstractAction implements PopupMenuListene
 	}
 
 	private String extractMethod(String text, int offset) {
-		this.params = new EditMethodDialog.EditParams(0, 0, 0, 0);
 		try {
 			StringBuilder extraction = new StringBuilder();
 
@@ -110,8 +107,6 @@ public class EditMethodAction extends AbstractAction implements PopupMenuListene
 						str += "\n";
 					} else if (str.contains("class ")) {
 						str = "\n" + str;
-					} else if (str.startsWith("import ")) {
-						this.params.headEnd = end;
 					}
 
 					extraction.append(str + "\n");
@@ -123,8 +118,6 @@ public class EditMethodAction extends AbstractAction implements PopupMenuListene
 						String method = text.substring(start, closing);
 						extraction.append(method);
 						extraction.append("}\n}\n");
-						this.params.methodStart = start;
-						this.params.methodEnd = closing;
 						return extraction.toString();
 					}
 				}
