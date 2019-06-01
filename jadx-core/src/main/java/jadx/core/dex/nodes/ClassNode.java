@@ -65,6 +65,16 @@ public class ClassNode extends LineAttrNode implements ILoadable, ICodeNode {
 	// cache maps
 	private Map<MethodInfo, MethodNode> mthInfoMap = Collections.emptyMap();
 
+	public ClassNode(String java, ClassInfo info) {
+		this.code = new CodeWriter();
+		this.code.add(java);
+
+		this.methods = new ArrayList<MethodNode>();
+		this.fields = new ArrayList<FieldNode>();
+		this.dex = null;
+		this.clsInfo = info;
+	}
+
 	public ClassNode(DexNode dex, ClassDef cls) {
 		this.dex = dex;
 		this.clsInfo = ClassInfo.fromDex(dex, cls.getTypeIndex());
@@ -220,9 +230,7 @@ public class ClassNode extends LineAttrNode implements ILoadable, ICodeNode {
 		if (fileName.endsWith(".java")) {
 			fileName = fileName.substring(0, fileName.length() - 5);
 		}
-		if (fileName.isEmpty()
-				|| fileName.equals("SourceFile")
-				|| fileName.equals("\"")) {
+		if (fileName.isEmpty() || fileName.equals("SourceFile") || fileName.equals("\"")) {
 			return;
 		}
 		if (clsInfo != null) {
@@ -230,8 +238,7 @@ public class ClassNode extends LineAttrNode implements ILoadable, ICodeNode {
 			if (fileName.equals(name)) {
 				return;
 			}
-			if (fileName.contains("$")
-					&& fileName.endsWith('$' + name)) {
+			if (fileName.contains("$") && fileName.endsWith('$' + name)) {
 				return;
 			}
 			ClassInfo parentClass = clsInfo.getTopParentClass();
@@ -354,9 +361,8 @@ public class ClassNode extends LineAttrNode implements ILoadable, ICodeNode {
 	}
 
 	/**
-	 * Return first method by original short name
-	 * Note: methods are not unique by name (class can have several methods with same name but different
-	 * signature)
+	 * Return first method by original short name Note: methods are not unique by
+	 * name (class can have several methods with same name but different signature)
 	 */
 	@Nullable
 	public MethodNode searchMethodByShortName(String name) {
@@ -399,8 +405,7 @@ public class ClassNode extends LineAttrNode implements ILoadable, ICodeNode {
 	}
 
 	public boolean isEnum() {
-		return getAccessFlags().isEnum()
-				&& getSuperClass() != null
+		return getAccessFlags().isEnum() && getSuperClass() != null
 				&& getSuperClass().getObject().equals(ArgType.ENUM.getObject());
 	}
 

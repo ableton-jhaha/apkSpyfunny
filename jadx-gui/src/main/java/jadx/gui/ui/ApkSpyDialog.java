@@ -2,6 +2,7 @@ package jadx.gui.ui;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
@@ -41,6 +42,7 @@ public abstract class ApkSpyDialog extends JDialog {
 		content.add(pane);
 
 		this.output = new JTextArea();
+		this.output.setFont(new Font("Courier New", Font.PLAIN, this.output.getFont().getSize()));
 
 		JScrollPane scroll2 = new JScrollPane(output);
 		Dimension size = scroll.getPreferredSize();

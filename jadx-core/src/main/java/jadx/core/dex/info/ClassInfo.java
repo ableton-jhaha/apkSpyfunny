@@ -27,6 +27,17 @@ public final class ClassInfo implements Comparable<ClassInfo> {
 		splitAndApplyNames(root, type, inner);
 	}
 
+	private ClassInfo(ArgType type) {
+		this.type = type;
+	}
+
+	public static ClassInfo fromEditor(String name, String fullName, String pkg) {
+		ClassInfo info = new ClassInfo(ArgType.object(fullName));
+		info.fullName = fullName;
+		info.pkg = pkg;
+		return info;
+	}
+
 	public static ClassInfo fromType(RootNode root, ArgType type) {
 		ArgType clsType = checkClassType(type);
 		ClassInfo cls = root.getInfoStorage().getCls(clsType);
@@ -152,7 +163,8 @@ public final class ClassInfo implements Comparable<ClassInfo> {
 		this.fullName = makeFullName();
 	}
 
-	private static String makeFullClsName(String pkg, String shortName, ClassInfo parentClass, boolean alias, boolean raw) {
+	private static String makeFullClsName(String pkg, String shortName, ClassInfo parentClass, boolean alias,
+			boolean raw) {
 		if (parentClass != null) {
 			String innerSep = raw ? "$" : ".";
 			String parentFullName;
@@ -183,8 +195,7 @@ public final class ClassInfo implements Comparable<ClassInfo> {
 	}
 
 	public String getAliasFullPath() {
-		return getAliasPkg().replace('.', File.separatorChar)
-				+ File.separatorChar
+		return getAliasPkg().replace('.', File.separatorChar) + File.separatorChar
 				+ getAliasNameWithoutPackage().replace('.', '_');
 	}
 

@@ -33,8 +33,7 @@ public class ClassBreakdown implements Cloneable {
 							|| line.contains("@interface ")) {
 						classDeclaration = line.substring(0, line.indexOf("{")).trim();
 						if (className == null) {
-							Matcher m = Pattern.compile(".*(class|interface|enum|@interface) (.+?).+\\{")
-									.matcher(classDeclaration);
+							Matcher m = Pattern.compile(".*(class|interface|enum|@interface) (.+?) .*").matcher(line);
 							if (m.find()) {
 								className = m.group(2);
 							}
@@ -217,8 +216,8 @@ public class ClassBreakdown implements Cloneable {
 	@Override
 	public String toString() {
 		StringBuilder str = new StringBuilder(this.imports);
-		str.append(this.classDeclaration.replaceAll("(.*?)(class|interface|enum|@interface) (.+?)(.+)\\{",
-				"$1$2 " + this.className + "$4{") + " {\n");
+		str.append((this.classDeclaration + " {\n").replaceAll("(.*?)(class|interface|enum|@interface) (.+?) (.+)",
+				"$1$2 " + this.className + " $4"));
 		if (this.memberVariables.length() > 0) {
 			for (String member : this.memberVariables.split("\n")) {
 				str.append("    " + member + "\n");
