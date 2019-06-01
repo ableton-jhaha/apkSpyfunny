@@ -48,6 +48,10 @@ public class JClass extends JLoadableNode {
 		getRootClass().load();
 	}
 
+	public void setLoaded(boolean loaded) {
+		this.loaded = loaded;
+	}
+
 	public synchronized void load() {
 		if (!loaded) {
 			cls.decompile();

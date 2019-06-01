@@ -535,7 +535,7 @@ public class MainWindow extends JFrame {
 	private void treeRightClickAction(MouseEvent e) {
 		Object obj = tree.getLastSelectedPathComponent();
 		if (obj instanceof JPackage) {
-			JPackagePopUp menu = new JPackagePopUp((JPackage) obj);
+			JPackagePopUp menu = new JPackagePopUp((JPackage) obj, tree);
 			menu.show(e.getComponent(), e.getX(), e.getY());
 		}
 	}
@@ -1065,7 +1065,7 @@ public class MainWindow extends JFrame {
 		JMenuItem excludeItem = new JCheckBoxMenuItem(NLS.str("popup.exclude"));
 		JMenuItem addClassItem = new JCheckBoxMenuItem(NLS.str("popup.add_class"));
 
-		public JPackagePopUp(JPackage pkg) {
+		public JPackagePopUp(JPackage pkg, JTree tree) {
 			excludeItem.setSelected(!pkg.isEnabled());
 			addClassItem.setEnabled(pkg.isEnabled());
 
@@ -1097,7 +1097,7 @@ public class MainWindow extends JFrame {
 
 				String toStr = builder.toString();
 
-				new AddClassDialog(MainWindow.this, new TextNode(toStr), toStr, pkgName.toString()).setVisible(true);
+				new AddClassDialog(MainWindow.this, new TextNode(toStr), toStr, pkgName.toString(), pkg, tree).setVisible(true);
 			});
 		}
 	}

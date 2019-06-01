@@ -27,7 +27,7 @@ public final class JavaClass implements JavaNode {
 	private List<JavaField> fields = Collections.emptyList();
 	private List<JavaMethod> methods = Collections.emptyList();
 
-	JavaClass(ClassNode classNode, JadxDecompiler decompiler) {
+	public JavaClass(ClassNode classNode, JadxDecompiler decompiler) {
 		this.decompiler = decompiler;
 		this.cls = classNode;
 		this.parent = null;
