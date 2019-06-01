@@ -1,0 +1,9 @@
+apply plugin: 'eclipse'
+
+dependencies {
+    compile 'commons-io:commons-io:2.6'
+    compile 'org.apache.commons:commons-lang3:3.8.1'
+    compile 'com.google.guava:guava:27.1-jre'
+    compile 'org.ow2.asm:asm:7.1'
+    compile 'org.ow2.asm:asm-tree:7.1'
+}

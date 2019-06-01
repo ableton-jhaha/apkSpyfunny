@@ -2,11 +2,12 @@ package com.lucasbaizer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 
-import jadx.gui.utils.DiffMatchPatch;
-import jadx.gui.utils.DiffMatchPatch.Diff;
+import com.lucasbaizer.DiffMatchPatch.Diff;
 
 public class ClassBreakdown implements Cloneable {
 	private String className;
@@ -28,8 +29,16 @@ public class ClassBreakdown implements Cloneable {
 		for (String line : split) {
 			if (allowRoot) {
 				if (!line.startsWith(" ")) {
-					if (line.contains("class ")) {
+					if (line.contains("class ") || line.contains("interface") || line.contains("enum ")
+							|| line.contains("@interface ")) {
 						classDeclaration = line.substring(0, line.indexOf("{")).trim();
+						if (className == null) {
+							Matcher m = Pattern.compile(".*(class|interface|enum|@interface) (.+?).+\\{")
+									.matcher(classDeclaration);
+							if (m.find()) {
+								className = m.group(2);
+							}
+						}
 						allowRoot = false;
 					} else {
 						imports += line.trim() + "\n";
@@ -208,7 +217,8 @@ public class ClassBreakdown implements Cloneable {
 	@Override
 	public String toString() {
 		StringBuilder str = new StringBuilder(this.imports);
-		str.append(this.classDeclaration + " {\n");
+		str.append(this.classDeclaration.replaceAll("(.*?)(class|interface|enum|@interface) (.+?)(.+)\\{",
+				"$1$2 " + this.className + "$4{") + " {\n");
 		if (this.memberVariables.length() > 0) {
 			for (String member : this.memberVariables.split("\n")) {
 				str.append("    " + member + "\n");

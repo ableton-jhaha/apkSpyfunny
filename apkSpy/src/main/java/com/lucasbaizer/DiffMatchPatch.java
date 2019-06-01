@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package jadx.gui.utils;
+package com.lucasbaizer;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
