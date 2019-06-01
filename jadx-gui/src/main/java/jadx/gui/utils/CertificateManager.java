@@ -106,8 +106,8 @@ public class CertificateManager {
 
 		append(builder, NLS.str("certificate.serialPubKeyType"), pub.getAlgorithm());
 		append(builder, NLS.str("certificate.serialPubKeyExponent"), pub.getPublicExponent().toString(10));
-		append(builder, NLS.str("certificate.serialPubKeyModulusSize"), Integer.toString(
-				pub.getModulus().toString(2).length()));
+		append(builder, NLS.str("certificate.serialPubKeyModulusSize"),
+				Integer.toString(pub.getModulus().toString(2).length()));
 		append(builder, NLS.str("certificate.serialPubKeyModulus"), pub.getModulus().toString(10));
 
 		return builder.toString();

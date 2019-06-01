@@ -79,4 +79,5 @@ test {
     jacoco {
         enabled = false
     }
+    testLogging.showStandardStreams = true
 }

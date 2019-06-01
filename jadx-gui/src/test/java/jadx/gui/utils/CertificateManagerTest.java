@@ -1,17 +1,19 @@
 package jadx.gui.utils;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.security.cert.Certificate;
 import java.util.Collection;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class CertificateManagerTest {
 	private static final String CERTIFICATE_TEST_DIR = "certificate-test/";
@@ -25,18 +27,24 @@ public class CertificateManagerTest {
 
 	private CertificateManager getCertificateManger(String resName) {
 		String certPath = getResourcePath(resName);
-		try (InputStream in = new FileInputStream(certPath)) {
+
+		try (InputStream in = new FileInputStream(URLDecoder.decode(certPath, "UTF-8"))) {
 			Collection<? extends Certificate> certificates = CertificateManager.readCertificates(in);
 			Certificate cert = certificates.iterator().next();
 			return new CertificateManager(cert);
 		} catch (Exception e) {
-			throw new RuntimeException("Failed to create CertificateManager");
+			throw new RuntimeException("Failed to create CertificateManager", e);
 		}
+
 	}
 
 	@BeforeEach
 	public void setUp() {
-		emptyPath = getResourcePath(EMPTY);
+		try {
+			emptyPath = URLDecoder.decode(getResourcePath(EMPTY), "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			throw new RuntimeException(e);
+		}
 		certificateManagerRSA = getCertificateManger(RSA);
 		certificateManagerDSA = getCertificateManger(DSA);
 	}
@@ -84,7 +92,8 @@ public class CertificateManagerTest {
 		String string = certificateManagerRSA.generateFingerprint();
 		assertTrue(string.contains("61 18 0A 71 3F C9 55 16 4E 04 E3 C5 45 08 D9 11"));
 		assertTrue(string.contains("A0 6E A6 06 DB 2C 6F 3A 16 56 7F 75 97 7B AE 85 C2 13 09 37"));
-		assertTrue(string.contains("12 53 E8 BB C8 AA 27 A8 49 9B F8 0D 6E 68 CE 32 35 50 DE 55 A7 E7 8C 29 51 00 96 D7 56 F4 54 44"));
+		assertTrue(string.contains(
+				"12 53 E8 BB C8 AA 27 A8 49 9B F8 0D 6E 68 CE 32 35 50 DE 55 A7 E7 8C 29 51 00 96 D7 56 F4 54 44"));
 	}
 
 	@Test
@@ -92,7 +101,8 @@ public class CertificateManagerTest {
 		String string = certificateManagerDSA.generateFingerprint();
 		assertTrue(string.contains("D9 06 A6 2D 1F 79 8C 9D A6 EF 40 C7 2E C2 EA 0B"));
 		assertTrue(string.contains("18 E9 9C D4 A1 40 8F 63 FA EC 2E 62 A0 F2 AE B7 3F C3 C2 04"));
-		assertTrue(string.contains("74 F9 48 64 EE AC 92 26 53 2C 7A 0E 55 BE 5E D8 2F A7 D9 A9 99 F5 D5 21 2C 51 21 C4 31 AD 73 40"));
+		assertTrue(string.contains(
+				"74 F9 48 64 EE AC 92 26 53 2C 7A 0E 55 BE 5E D8 2F A7 D9 A9 99 F5 D5 21 2C 51 21 C4 31 AD 73 40"));
 	}
 
 	@Test
