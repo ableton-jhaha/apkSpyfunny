@@ -13,7 +13,7 @@ public class ChangeCache {
 		return CHANGES;
 	}
 
-	public static void putChange(String className, ClassBreakdown content, String method) {
+	public static void putChange(String className, ClassBreakdown content, JavaMethod method) {
 		if (CHANGES.containsKey(className)) {
 			ClassBreakdown original = CHANGES.get(className);
 

@@ -426,7 +426,18 @@ public class MainWindow extends JFrame {
 
 		int ret = fileChooser.showSaveDialog(mainPanel);
 		if (ret == JFileChooser.APPROVE_OPTION) {
+			boolean autoConvert = JOptionPane.showConfirmDialog(this,
+					"Would you like to automatically convert packaged dependencies into Gradle dependencies?",
+					"Save as Gradle Project", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION;
+
 			decompilerArgs.setExportAsGradleProject(export);
+			decompilerArgs.setConvertDependencies(autoConvert);
+			if (autoConvert) {
+				decompilerArgs.setGradleDependencyFunction(dependencies -> {
+					System.out.println(dependencies);
+					return null;
+				});
+			}
 			if (export) {
 				decompilerArgs.setSkipSources(false);
 				decompilerArgs.setSkipResources(false);
@@ -1119,7 +1130,6 @@ public class MainWindow extends JFrame {
 
 				TabbedPane tp = getTabbedPane();
 				for (int i = 0; i < tp.getTabCount(); i++) {
-					System.out.println(tp.getTitleAt(i));
 					if (cls.getFullName().equals(tp.getTitleAt(i))) {
 						tp.remove(i);
 						break;

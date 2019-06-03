@@ -63,7 +63,7 @@ public class SmaliBreakdown {
 	public List<SmaliMethod> getChangedMethods(ClassBreakdown fromClass) {
 		List<SmaliMethod> smalis = new ArrayList<>();
 
-		for (String javaMethod : fromClass.getChangedMethods()) {
+		for (JavaMethod javaMethod : fromClass.getChangedMethods()) {
 			smali: for (SmaliMethod smaliMethod : this.methods) {
 				String methodDeclaration = smaliMethod.getContent().split("\n")[0];
 				methodDeclaration = methodDeclaration.substring(methodDeclaration.lastIndexOf(' '));
@@ -74,7 +74,7 @@ public class SmaliBreakdown {
 				Type[] types = Type.getArgumentTypes(descriptor);
 				Type returnType = Type.getReturnType(descriptor);
 
-				String javaDeclaration = javaMethod.split("\n")[0];
+				String javaDeclaration = javaMethod.getHeader();
 				String beforeArguments = javaDeclaration.substring(0, javaDeclaration.indexOf('(')).trim();
 				String javaName = beforeArguments.substring(beforeArguments.lastIndexOf(' ') + 1);
 				int x = beforeArguments.lastIndexOf(' ', beforeArguments.lastIndexOf(' ') - 1);

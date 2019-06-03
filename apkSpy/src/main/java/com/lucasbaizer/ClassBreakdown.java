@@ -16,8 +16,8 @@ public class ClassBreakdown implements Cloneable {
 	private String imports;
 	private String classDeclaration;
 	private String memberVariables;
-	private List<String> changedMethods;
-	private List<String> methods;
+	private List<JavaMethod> changedMethods;
+	private List<JavaMethod> methods;
 	private List<ClassBreakdown> innerClasses;
 
 	public static ClassBreakdown breakdown(String className, String simpleName, String content) {
@@ -26,15 +26,12 @@ public class ClassBreakdown implements Cloneable {
 		String imports = "";
 		String classDeclaration = "";
 		String memberVariables = "";
-		List<String> methods = new ArrayList<>();
+		List<JavaMethod> methods = new ArrayList<>();
 		List<ClassBreakdown> innerClasses = new ArrayList<>();
 		String currentBlock = "";
 		int blockType = 0;
 		boolean allowRoot = true;
 		for (String line : split) {
-			if (line.trim().startsWith("/*") || line.trim().startsWith("//")) {
-				continue;
-			}
 			if (allowRoot) {
 				if (!line.startsWith(" ")) {
 					if (line.contains("class ") || line.contains("interface") || line.contains("enum ")
@@ -55,7 +52,7 @@ public class ClassBreakdown implements Cloneable {
 				if (line.startsWith("    ") && !line.startsWith("     ")) {
 					if (line.trim().equals("}")) {
 						if (blockType == 1) {
-							methods.add(currentBlock.trim() + "\n}");
+							methods.add(new JavaMethod(currentBlock.trim() + "\n}"));
 						} else if (blockType == 2) {
 							innerClasses.add(ClassBreakdown.breakdown(null, null, currentBlock.trim() + "\n}"));
 						}
@@ -79,7 +76,7 @@ public class ClassBreakdown implements Cloneable {
 
 		if (!currentBlock.isEmpty()) {
 			if (blockType == 1) {
-				methods.add(currentBlock);
+				methods.add(new JavaMethod(currentBlock));
 			} else if (blockType == 2) {
 				innerClasses.add(ClassBreakdown.breakdown(null, null, currentBlock.trim() + "\n}"));
 			}
@@ -90,7 +87,7 @@ public class ClassBreakdown implements Cloneable {
 	}
 
 	public ClassBreakdown(String imports, String classDeclaration, String className, String simpleName,
-			String memberVariables, List<String> methods, List<ClassBreakdown> innerClasses) {
+			String memberVariables, List<JavaMethod> methods, List<ClassBreakdown> innerClasses) {
 		this.imports = imports;
 		this.classDeclaration = classDeclaration;
 		this.className = className;
@@ -136,11 +133,11 @@ public class ClassBreakdown implements Cloneable {
 		this.memberVariables = memberVariables;
 	}
 
-	public List<String> getMethods() {
+	public List<JavaMethod> getMethods() {
 		return methods;
 	}
 
-	public void setMethods(List<String> methods) {
+	public void setMethods(List<JavaMethod> methods) {
 		this.methods = methods;
 	}
 
@@ -152,11 +149,11 @@ public class ClassBreakdown implements Cloneable {
 		this.className = className;
 	}
 
-	public List<String> getChangedMethods() {
+	public List<JavaMethod> getChangedMethods() {
 		return changedMethods;
 	}
 
-	public void setChangedMethods(List<String> methods) {
+	public void setChangedMethods(List<JavaMethod> methods) {
 		this.changedMethods = methods;
 	}
 
@@ -168,12 +165,12 @@ public class ClassBreakdown implements Cloneable {
 		this.simpleName = simpleName;
 	}
 
-	public ClassBreakdown addOrReplaceMethod(String newMethod) {
+	public ClassBreakdown addOrReplaceMethod(JavaMethod newMethod) {
 		ClassBreakdown clone = new ClassBreakdown(this);
 
-		String header = newMethod.trim().split("\n")[0].trim();
+		String header = newMethod.getHeader();
 		for (int i = 0; i < methods.size(); i++) {
-			String otherHeader = methods.get(i).split("\n")[0].trim();
+			String otherHeader = methods.get(i).getHeader();
 			if (header.equals(otherHeader)) {
 				clone.methods.set(i, newMethod);
 				return clone;
@@ -202,8 +199,8 @@ public class ClassBreakdown implements Cloneable {
 		return clone;
 	}
 
-	private String toStub(String method) {
-		String header = method.trim().split("\n")[0].trim();
+	private JavaMethod toStub(JavaMethod method) {
+		String header = method.getHeader();
 		String containing = header.substring(0, header.indexOf('('));
 
 		String stub = header + "\n";
@@ -225,15 +222,15 @@ public class ClassBreakdown implements Cloneable {
 		}
 		stub += "}";
 
-		return stub;
+		return new JavaMethod(stub);
 	}
 
-	public ClassBreakdown mergeMethodStubs(List<String> methods) {
+	public ClassBreakdown mergeMethodStubs(List<JavaMethod> methods) {
 		ClassBreakdown clone = new ClassBreakdown(this);
-		outer: for (String newMethod : methods) {
-			String header = newMethod.trim().split("\n")[0].trim();
+		outer: for (JavaMethod newMethod : methods) {
+			String header = newMethod.getHeader();
 			for (int i = 0; i < this.methods.size(); i++) {
-				String otherHeader = this.methods.get(i).split("\n")[0].trim();
+				String otherHeader = this.methods.get(i).getHeader();
 				if (header.equals(otherHeader)) {
 					continue outer;
 				}
@@ -245,9 +242,9 @@ public class ClassBreakdown implements Cloneable {
 		return clone;
 	}
 
-	public ClassBreakdown mergeMethods(List<String> methods) {
+	public ClassBreakdown mergeMethods(List<JavaMethod> methods) {
 		ClassBreakdown breakdown = new ClassBreakdown(this);
-		for (String method : methods) {
+		for (JavaMethod method : methods) {
 			breakdown = breakdown.addOrReplaceMethod(method);
 		}
 		return breakdown;
@@ -294,8 +291,8 @@ public class ClassBreakdown implements Cloneable {
 			}
 		}
 		if (this.methods.size() > 0) {
-			for (String method : this.methods) {
-				for (String split : method.split("\n")) {
+			for (JavaMethod method : this.methods) {
+				for (String split : method.toString().split("\n")) {
 					str.append("    " + split + "\n");
 				}
 				str.append("\n");

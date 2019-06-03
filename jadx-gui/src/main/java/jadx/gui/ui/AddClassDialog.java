@@ -47,7 +47,7 @@ public class AddClassDialog extends ApkSpyDialog {
 		breakdown.setFullName(this.packageName + "." + breakdown.getSimpleName());
 
 		JClass cls = new JClass(new JavaClass(
-				new ClassNode(this.getCodeArea().getText().trim(),
+				new ClassNode(breakdown,
 						ClassInfo.fromEditor(breakdown.getSimpleName(), breakdown.getFullName(), this.packageName)),
 				null));
 		cls.setUserObject(breakdown.getSimpleName());

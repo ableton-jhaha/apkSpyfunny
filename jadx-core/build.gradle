@@ -2,6 +2,7 @@ ext.jadxClasspath = 'clsp-data/android-5.1.jar'
 
 dependencies {
     runtime files(jadxClasspath)
+    compile(project(":apkSpy"))
 
     compile files('lib/dx-1.16.jar')
 
@@ -14,6 +15,7 @@ dependencies {
         exclude group: 'com.google.guava'
     }
     compile 'com.google.guava:guava:27.1-jre'
+    compile 'com.google.code.gson:gson:2.8.5'
 
     testCompile 'org.apache.commons:commons-lang3:3.8.1'
 }

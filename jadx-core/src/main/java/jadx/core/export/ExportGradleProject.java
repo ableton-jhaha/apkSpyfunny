@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,9 +22,7 @@ public class ExportGradleProject {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ExportGradleProject.class);
 
-	private static final Set<String> IGNORE_CLS_NAMES = new HashSet<>(Arrays.asList(
-			"R",
-			"BuildConfig"));
+	private static final Set<String> IGNORE_CLS_NAMES = new HashSet<>(Arrays.asList("R", "BuildConfig"));
 
 	private final RootNode root;
 	private final File outDir;
@@ -37,18 +36,17 @@ public class ExportGradleProject {
 		this.resOutDir = new File(outDir, "src/main");
 	}
 
-	public void init() {
+	public void init(boolean x) {
 		try {
 			FileUtils.makeDirs(srcOutDir);
 			FileUtils.makeDirs(resOutDir);
-			saveBuildGradle();
 			skipGeneratedClasses();
 		} catch (Exception e) {
 			throw new JadxRuntimeException("Gradle export failed", e);
 		}
 	}
 
-	private void saveBuildGradle() throws IOException {
+	public void saveBuildGradle(List<String> dependencies) throws IOException {
 		TemplateFile tmpl = TemplateFile.fromResources("/export/build.gradle.tmpl");
 		String appPackage = root.getAppPackage();
 		if (appPackage == null) {
@@ -58,6 +56,8 @@ public class ExportGradleProject {
 		// TODO: load from AndroidManifest.xml
 		tmpl.add("minSdkVersion", 9);
 		tmpl.add("targetSdkVersion", 21);
+		tmpl.add("extractedDependencies", String.join(System.lineSeparator(), dependencies.stream()
+				.map(dependency -> "implementation '" + dependency + "'").collect(Collectors.toList())));
 		tmpl.save(new File(outDir, "build.gradle"));
 	}
 

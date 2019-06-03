@@ -1,11 +1,11 @@
 package jadx.tests.functional;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+
 import org.junit.jupiter.api.Test;
 
 import jadx.core.export.TemplateFile;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
 
 public class TemplateFileTest {
 
@@ -15,6 +15,7 @@ public class TemplateFileTest {
 		tmpl.add("applicationId", "SOME_ID");
 		tmpl.add("minSdkVersion", 1);
 		tmpl.add("targetSdkVersion", 2);
+		tmpl.add("extractedDependencies", "");
 		String res = tmpl.build();
 		System.out.println(res);
 

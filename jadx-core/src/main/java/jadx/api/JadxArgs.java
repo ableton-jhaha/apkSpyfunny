@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class JadxArgs {
@@ -38,7 +39,8 @@ public class JadxArgs {
 	private boolean skipSources = false;
 
 	/**
-	 * Predicate that allows to filter the classes to be process based on their full name
+	 * Predicate that allows to filter the classes to be process based on their full
+	 * name
 	 */
 	private Predicate<String> classFilter = null;
 
@@ -53,6 +55,8 @@ public class JadxArgs {
 	private boolean replaceConsts = true;
 	private boolean respectBytecodeAccModifiers = false;
 	private boolean exportAsGradleProject = false;
+	private boolean convertDependencies = false;
+	private Function<List<String>, String> gradleDependencyConsumer = null;
 
 	private boolean fsCaseSensitive;
 
@@ -300,6 +304,22 @@ public class JadxArgs {
 		updateRenameFlag(renamePrintable, RenameEnum.PRINTABLE);
 	}
 
+	public boolean isConvertDependencies() {
+		return convertDependencies;
+	}
+
+	public void setConvertDependencies(boolean convertDependencies) {
+		this.convertDependencies = convertDependencies;
+	}
+
+	public Function<List<String>, String> getGradleDependencyFunction() {
+		return gradleDependencyConsumer;
+	}
+
+	public void setGradleDependencyFunction(Function<List<String>, String> gradleDependencyConsumer) {
+		this.gradleDependencyConsumer = gradleDependencyConsumer;
+	}
+
 	private void updateRenameFlag(boolean enabled, RenameEnum flag) {
 		if (enabled) {
 			renameFlags.add(flag);
@@ -310,29 +330,16 @@ public class JadxArgs {
 
 	@Override
 	public String toString() {
-		return "JadxArgs{" + "inputFiles=" + inputFiles
-				+ ", outDir=" + outDir
-				+ ", outDirSrc=" + outDirSrc
-				+ ", outDirRes=" + outDirRes
-				+ ", threadsCount=" + threadsCount
-				+ ", cfgOutput=" + cfgOutput
-				+ ", rawCFGOutput=" + rawCFGOutput
-				+ ", fallbackMode=" + fallbackMode
-				+ ", showInconsistentCode=" + showInconsistentCode
-				+ ", useImports=" + useImports
-				+ ", skipResources=" + skipResources
-				+ ", skipSources=" + skipSources
-				+ ", deobfuscationOn=" + deobfuscationOn
-				+ ", deobfuscationForceSave=" + deobfuscationForceSave
-				+ ", useSourceNameAsClassAlias=" + useSourceNameAsClassAlias
-				+ ", deobfuscationMinLength=" + deobfuscationMinLength
-				+ ", deobfuscationMaxLength=" + deobfuscationMaxLength
-				+ ", escapeUnicode=" + escapeUnicode
-				+ ", replaceConsts=" + replaceConsts
-				+ ", respectBytecodeAccModifiers=" + respectBytecodeAccModifiers
-				+ ", exportAsGradleProject=" + exportAsGradleProject
-				+ ", fsCaseSensitive=" + fsCaseSensitive
-				+ ", renameFlags=" + renameFlags
-				+ '}';
+		return "JadxArgs{" + "inputFiles=" + inputFiles + ", outDir=" + outDir + ", outDirSrc=" + outDirSrc
+				+ ", outDirRes=" + outDirRes + ", threadsCount=" + threadsCount + ", cfgOutput=" + cfgOutput
+				+ ", rawCFGOutput=" + rawCFGOutput + ", fallbackMode=" + fallbackMode + ", showInconsistentCode="
+				+ showInconsistentCode + ", useImports=" + useImports + ", skipResources=" + skipResources
+				+ ", skipSources=" + skipSources + ", deobfuscationOn=" + deobfuscationOn + ", deobfuscationForceSave="
+				+ deobfuscationForceSave + ", useSourceNameAsClassAlias=" + useSourceNameAsClassAlias
+				+ ", deobfuscationMinLength=" + deobfuscationMinLength + ", deobfuscationMaxLength="
+				+ deobfuscationMaxLength + ", escapeUnicode=" + escapeUnicode + ", replaceConsts=" + replaceConsts
+				+ ", respectBytecodeAccModifiers=" + respectBytecodeAccModifiers + ", exportAsGradleProject="
+				+ exportAsGradleProject + ", fsCaseSensitive=" + fsCaseSensitive + ", renameFlags=" + renameFlags
+				+ ", convertDependencies=" + convertDependencies + '}';
 	}
 }

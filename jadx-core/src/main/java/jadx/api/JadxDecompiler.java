@@ -1,7 +1,12 @@
 package jadx.api;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.StringWriter;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -15,8 +20,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
-import org.jf.baksmali.Adaptors.ClassDefinition;
+import javax.net.ssl.HttpsURLConnection;
+
 import org.jf.baksmali.BaksmaliOptions;
+import org.jf.baksmali.Adaptors.ClassDefinition;
 import org.jf.dexlib2.DexFileFactory;
 import org.jf.dexlib2.Opcodes;
 import org.jf.dexlib2.dexbacked.DexBackedClassDef;
@@ -24,6 +31,10 @@ import org.jf.dexlib2.dexbacked.DexBackedDexFile;
 import org.jf.util.IndentingWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import jadx.core.Jadx;
 import jadx.core.ProcessClass;
@@ -179,9 +190,10 @@ public final class JadxDecompiler {
 
 		File sourcesOutDir;
 		File resOutDir;
+		ExportGradleProject export = null;
 		if (args.isExportAsGradleProject()) {
-			ExportGradleProject export = new ExportGradleProject(root, args.getOutDir());
-			export.init();
+			export = new ExportGradleProject(root, args.getOutDir());
+			export.init(true);
 			sourcesOutDir = export.getSrcOutDir();
 			resOutDir = export.getResOutDir();
 		} else {
@@ -192,7 +204,12 @@ public final class JadxDecompiler {
 			appendResourcesSave(executor, resOutDir);
 		}
 		if (saveSources) {
-			appendSourcesSave(executor, sourcesOutDir);
+			List<String> dependencies = appendSourcesSave(executor, sourcesOutDir, export);
+			try {
+				export.saveBuildGradle(dependencies);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 		return executor;
 	}
@@ -203,7 +220,51 @@ public final class JadxDecompiler {
 		}
 	}
 
-	private void appendSourcesSave(ExecutorService executor, File outDir) {
+	private List<String> appendSourcesSave(ExecutorService executor, File outDir, ExportGradleProject export) {
+		List<String> dependencies = new ArrayList<>();
+
+		if (export != null && args.isConvertDependencies()) {
+			for (JavaPackage pkg : getPackages()) {
+				String gid = pkg.getFullName();
+
+				try {
+					HttpsURLConnection connection = (HttpsURLConnection) new URL(
+							"https://search.maven.org/solrsearch/select?q=g"
+									+ URLEncoder.encode(":\"" + gid + "\"", "UTF-8") + "&wt=json").openConnection();
+					connection.setRequestMethod("GET");
+					BufferedReader rd = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+					String line;
+					StringBuilder result = new StringBuilder();
+					while ((line = rd.readLine()) != null) {
+						result.append(line);
+					}
+					rd.close();
+
+					JsonObject json = new JsonParser().parse(result.toString()).getAsJsonObject().get("response")
+							.getAsJsonObject();
+					if (json.get("numFound").getAsInt() == 0) {
+						continue;
+					}
+
+					List<String> gradleStrings = new ArrayList<>();
+					for (JsonElement item : json.get("docs").getAsJsonArray()) {
+						JsonObject doc = item.getAsJsonObject();
+
+						String gradleString = doc.get("id").getAsString() + ":"
+								+ doc.get("latestVersion").getAsString();
+						gradleStrings.add(gradleString);
+					}
+
+					String returned = this.args.getGradleDependencyFunction().apply(gradleStrings);
+					if (returned != null) {
+						dependencies.add(returned);
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+
 		final Predicate<String> classFilter = args.getClassFilter();
 		for (JavaClass cls : getClasses()) {
 			if (cls.getClassNode().contains(AFlag.DONT_GENERATE)) {
@@ -221,6 +282,8 @@ public final class JadxDecompiler {
 				}
 			});
 		}
+
+		return dependencies;
 	}
 
 	public List<JavaClass> getClasses() {
