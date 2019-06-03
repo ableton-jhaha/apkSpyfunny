@@ -43,10 +43,10 @@ public abstract class ApkSpyDialog extends JDialog {
 
 		this.output = new JTextArea();
 		this.output.setFont(new Font("Courier New", Font.PLAIN, this.output.getFont().getSize()));
+		this.output.setEditable(false);
 
 		JScrollPane scroll2 = new JScrollPane(output);
 		Dimension size = scroll.getPreferredSize();
-		size.width /= 2;
 		scroll2.setPreferredSize(size);
 		content.add(scroll2);
 

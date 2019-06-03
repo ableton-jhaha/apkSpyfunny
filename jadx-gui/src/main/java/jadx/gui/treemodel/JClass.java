@@ -12,7 +12,7 @@ import jadx.core.dex.info.AccessInfo;
 import jadx.gui.utils.NLS;
 import jadx.gui.utils.UiUtils;
 
-public class JClass extends JLoadableNode {
+public class JClass extends JLoadableNode implements Comparable<JClass> {
 	private static final long serialVersionUID = -1239986875244097177L;
 
 	private static final ImageIcon ICON_CLASS = UiUtils.openIcon("class_obj");
@@ -174,5 +174,10 @@ public class JClass extends JLoadableNode {
 	@Override
 	public String makeLongString() {
 		return cls.getFullName();
+	}
+
+	@Override
+	public int compareTo(JClass o) {
+		return this.getName().compareTo(o.getName());
 	}
 }

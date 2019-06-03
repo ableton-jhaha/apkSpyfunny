@@ -68,6 +68,8 @@ import org.fife.ui.rsyntaxtextarea.Theme;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.lucasbaizer.ChangeCache;
+
 import jadx.api.JadxArgs;
 import jadx.api.JavaNode;
 import jadx.api.ResourceFile;
@@ -536,6 +538,9 @@ public class MainWindow extends JFrame {
 		Object obj = tree.getLastSelectedPathComponent();
 		if (obj instanceof JPackage) {
 			JPackagePopUp menu = new JPackagePopUp((JPackage) obj, tree);
+			menu.show(e.getComponent(), e.getX(), e.getY());
+		} else if (obj instanceof JClass) {
+			JClassPopUp menu = new JClassPopUp((JClass) obj, tree);
 			menu.show(e.getComponent(), e.getX(), e.getY());
 		}
 	}
@@ -1097,7 +1102,32 @@ public class MainWindow extends JFrame {
 
 				String toStr = builder.toString();
 
-				new AddClassDialog(MainWindow.this, new TextNode(toStr), toStr, pkgName.toString(), pkg, tree).setVisible(true);
+				new AddClassDialog(MainWindow.this, new TextNode(toStr), toStr, pkgName.toString(), pkg, tree)
+						.setVisible(true);
+			});
+		}
+	}
+
+	private class JClassPopUp extends JPopupMenu {
+		JMenuItem deleteItem = new JCheckBoxMenuItem(NLS.str("popup.delete"));
+
+		public JClassPopUp(JClass cls, JTree tree) {
+			add(deleteItem);
+			deleteItem.addItemListener(e -> {
+				ChangeCache.getChanges().remove(cls.getFullName());
+				ChangeCache.getClassDeletions().add(cls.getFullName());
+
+				TabbedPane tp = getTabbedPane();
+				for (int i = 0; i < tp.getTabCount(); i++) {
+					System.out.println(tp.getTitleAt(i));
+					if (cls.getFullName().equals(tp.getTitleAt(i))) {
+						tp.remove(i);
+						break;
+					}
+				}
+
+				DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+				model.removeNodeFromParent(cls);
 			});
 		}
 	}

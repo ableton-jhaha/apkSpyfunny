@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import com.android.dex.ClassData;
 import com.android.dex.ClassData.Field;
 import com.android.dex.ClassData.Method;
+import com.android.dx.rop.code.AccessFlags;
 import com.android.dex.ClassDef;
 import com.android.dex.Dex;
 
@@ -68,11 +69,13 @@ public class ClassNode extends LineAttrNode implements ILoadable, ICodeNode {
 	public ClassNode(String java, ClassInfo info) {
 		this.code = new CodeWriter();
 		this.code.add(java);
+		this.code.finish();
 
 		this.methods = new ArrayList<MethodNode>();
 		this.fields = new ArrayList<FieldNode>();
 		this.dex = null;
 		this.clsInfo = info;
+		this.accessFlags = new AccessInfo(AccessFlags.ACC_PUBLIC, AFType.CLASS);
 	}
 
 	public ClassNode(DexNode dex, ClassDef cls) {

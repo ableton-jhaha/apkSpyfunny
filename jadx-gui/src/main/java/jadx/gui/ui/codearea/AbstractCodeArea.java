@@ -28,10 +28,13 @@ public abstract class AbstractCodeArea extends RSyntaxTextArea {
 	public AbstractCodeArea(ContentPanel contentPanel) {
 		this.contentPanel = contentPanel;
 		this.node = contentPanel.getNode();
+		this.setTabsEmulated(true);
+		this.setTabSize(4);
 	}
 
 	/**
-	 * Implement in this method the code that loads and sets the content to be displayed
+	 * Implement in this method the code that loads and sets the content to be
+	 * displayed
 	 */
 	public abstract void load();
 
