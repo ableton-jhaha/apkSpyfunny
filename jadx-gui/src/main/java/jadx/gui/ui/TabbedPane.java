@@ -32,8 +32,7 @@ import jadx.gui.utils.JumpPosition;
 import jadx.gui.utils.NLS;
 import jadx.gui.utils.UiUtils;
 
-public class TabbedPane extends JTabbedPane {
-
+public class TabbedPane extends DnDTabbedPane {
 	private static final Logger LOG = LoggerFactory.getLogger(TabbedPane.class);
 	private static final long serialVersionUID = -8833600618794570904L;
 
@@ -45,6 +44,8 @@ public class TabbedPane extends JTabbedPane {
 	private transient JumpManager jumps = new JumpManager();
 
 	TabbedPane(MainWindow window) {
+		super();
+
 		this.mainWindow = window;
 
 		setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
@@ -53,8 +54,7 @@ public class TabbedPane extends JTabbedPane {
 			int direction = e.getWheelRotation();
 			int index = getSelectedIndex();
 			int maxIndex = getTabCount() - 1;
-			if ((index == 0 && direction < 0)
-					|| (index == maxIndex && direction > 0)) {
+			if ((index == 0 && direction < 0) || (index == maxIndex && direction > 0)) {
 				index = maxIndex - index;
 			} else {
 				index += direction;

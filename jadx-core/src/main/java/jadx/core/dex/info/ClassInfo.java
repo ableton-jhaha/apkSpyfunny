@@ -33,6 +33,7 @@ public final class ClassInfo implements Comparable<ClassInfo> {
 
 	public static ClassInfo fromEditor(String name, String fullName, String pkg) {
 		ClassInfo info = new ClassInfo(ArgType.object(fullName));
+		info.name = name;
 		info.fullName = fullName;
 		info.pkg = pkg;
 		return info;

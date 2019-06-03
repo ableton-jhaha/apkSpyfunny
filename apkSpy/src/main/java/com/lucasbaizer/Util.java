@@ -33,6 +33,9 @@ public class Util {
 		}
 		Process proc = builder.start();
 
+		out.write(String.join(" ", args).getBytes(StandardCharsets.UTF_8));
+		out.write('\n');
+
 		BufferedReader in = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 		String line;
 		while ((line = in.readLine()) != null) {

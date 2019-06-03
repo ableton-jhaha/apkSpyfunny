@@ -8,13 +8,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 
 public class ApkSpy {
+	private static String getClasspath(String... libs) {
+		return String.join(File.pathSeparator, Arrays.stream(libs)
+				.map(lib -> String.join(File.separator, "..", "libs", lib)).collect(Collectors.toList()));
+	}
+
 	public static boolean lint(String apk, String className, ClassBreakdown content, OutputStream out)
 			throws IOException, InterruptedException {
 		System.out.println("Linting: " + apk);
@@ -39,7 +46,10 @@ public class ApkSpy {
 		}
 		Files.createDirectories(root.resolve("libs"));
 		Files.copy(stubPath, Paths.get("project-tmp", "libs", "stub.jar"));
+
 		Files.copy(Paths.get("tools", "android.jar"), Paths.get("project-tmp", "libs", "android.jar"));
+		Files.copy(Paths.get("tools", "httpcore-4.4.1.jar"), Paths.get("project-tmp", "libs", "httpcore-4.4.1.jar"));
+		Files.copy(Paths.get("tools", "httpclient-4.5.jar"), Paths.get("project-tmp", "libs", "httpclient-4.5.jar"));
 
 		Files.createDirectories(root.resolve("bin"));
 
@@ -61,9 +71,8 @@ public class ApkSpy {
 				out.write(b);
 			}
 		}, javac == null ? "javac" : javac.toAbsolutePath().toString(), "-cp",
-				String.join(File.pathSeparator, String.join(File.separator, "..", "libs", "stub.jar"),
-						String.join(File.separator, "..", "libs", "android.jar")),
-				"-d", ".." + File.separator + "bin", className.replace('.', File.separatorChar) + ".java");
+				getClasspath("android.jar", "stub.jar", "httpcore-4.4.1.jar", "httpclient-4.5.jar"), "-d",
+				".." + File.separator + "bin", className.replace('.', File.separatorChar) + ".java");
 
 		Util.attemptDelete(root.toFile());
 
@@ -71,7 +80,8 @@ public class ApkSpy {
 	}
 
 	public static boolean merge(String apk, String outputLocation, String sdkPath, String applicationId,
-			Map<String, ClassBreakdown> classes, OutputStream out) throws IOException, InterruptedException {
+			Map<String, ClassBreakdown> classes, List<String> deletions, OutputStream out)
+			throws IOException, InterruptedException {
 		System.out.println(sdkPath);
 		sdkPath = sdkPath.replace("\\", "\\\\");
 		System.out.println(sdkPath);
@@ -126,7 +136,12 @@ public class ApkSpy {
 			JarGenerator.generateStubJar(modifyingApk, stubPath.toFile(), out, classes);
 		}
 		Files.createDirectories(Paths.get("project-tmp", "app", "libs"));
-		Files.copy(stubPath, Paths.get("project-tmp", "app", "libs", "stub.jar"));
+
+		if (!Files.exists(Paths.get("project-tmp", "app", "libs", "stub.jar"))) {
+			// we check if it doesn't already exist, in case gradle has a lock on it and it
+			// couldn't be deleted before
+			Files.copy(stubPath, Paths.get("project-tmp", "app", "libs", "stub.jar"));
+		}
 
 		if (!Util.isWindows()) {
 			Runtime.getRuntime().exec("chmod +x project-tmp/gradlew").waitFor();
@@ -147,6 +162,13 @@ public class ApkSpy {
 
 		ApktoolWrapper.decode(modifyingApk.toPath(), "original", true, out);
 
+		for (String deletion : deletions) {
+			// file might not exist, as we could delete temporary classes that we made in
+			// between compilations
+			Files.deleteIfExists(
+					Paths.get("smali", "original", "smali", deletion.replace('.', File.separatorChar) + ".smali"));
+		}
+
 		Files.walk(Paths.get("smali", "generated", "smali"))
 				.filter(path -> Files.isRegularFile(path) && path.getFileName().toString().startsWith("ApkSpy_"))
 				.forEach(path -> {
@@ -155,26 +177,38 @@ public class ApkSpy {
 								path.toAbsolutePath().toString().substring(
 										Paths.get("smali", "generated", "smali").toAbsolutePath().toString().length())
 										.replace("ApkSpy_", ""));
+
+						String modifiedContent = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+						modifiedContent = modifiedContent.replace("ApkSpy_", "");
+
 						if (Files.exists(equivalent)) {
-							String modifiedContent = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
 							String originalContent = new String(Files.readAllBytes(equivalent), StandardCharsets.UTF_8);
 
-							modifiedContent = modifiedContent.replace("ApkSpy_", "");
-
 							SmaliBreakdown modifiedSmali = SmaliBreakdown.breakdown(modifiedContent);
-							List<SmaliMethod> methods = modifiedSmali.getChangedMethods(
-									classes.get(modifiedSmali.getClassName().replace("ApkSpy_", "")));
 
-							StringBuilder builder = new StringBuilder(originalContent);
-							for (SmaliMethod method : methods) {
-								SmaliBreakdown originalSmali = SmaliBreakdown.breakdown(builder.toString());
-								SmaliMethod equivalentMethod = originalSmali.getEquivalentMethod(method);
+							ClassBreakdown relative = classes.get(modifiedSmali.getClassName());
 
-								builder.delete(equivalentMethod.getStart(), equivalentMethod.getEnd());
-								builder.insert(equivalentMethod.getStart(), method.getContent());
+							// check to make sure it's not an inner class
+							if (relative != null) {
+								System.out.println("Merging smali for class: " + modifiedSmali.getClassName());
+
+								List<SmaliMethod> methods = modifiedSmali.getChangedMethods(relative);
+
+								System.out
+										.println("Originally changed methods: " + relative.getChangedMethods().size());
+								System.out.println("Merging method count: " + methods.size());
+
+								StringBuilder builder = new StringBuilder(originalContent);
+								for (SmaliMethod method : methods) {
+									SmaliBreakdown originalSmali = SmaliBreakdown.breakdown(builder.toString());
+									SmaliMethod equivalentMethod = originalSmali.getEquivalentMethod(method);
+
+									builder.delete(equivalentMethod.getStart(), equivalentMethod.getEnd());
+									builder.insert(equivalentMethod.getStart(), method.getContent());
+								}
+
+								Files.write(equivalent, builder.toString().getBytes(StandardCharsets.UTF_8));
 							}
-
-							Files.write(equivalent, builder.toString().getBytes(StandardCharsets.UTF_8));
 						} else {
 							Files.copy(path, equivalent);
 						}

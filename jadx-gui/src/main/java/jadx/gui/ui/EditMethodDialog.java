@@ -25,10 +25,16 @@ public class EditMethodDialog extends ApkSpyDialog {
 		this.selectedCodeArea = selectedCodeArea;
 	}
 
+	private ClassBreakdown merge(ClassBreakdown changed, ClassBreakdown original) {
+		return changed.mergeMemberVariables(original.getMemberVariables()).mergeMethodStubs(original.getMethods())
+				.mergeInnerClassStubs(original);
+	}
+
 	@Override
 	protected void onSave() {
-		ClassBreakdown original = ClassBreakdown.breakdown(cls.getFullName(), cls.getContent());
-		ClassBreakdown changed = ClassBreakdown.breakdown(cls.getFullName(), this.getCodeArea().getText());
+		ClassBreakdown original = ClassBreakdown.breakdown(cls.getFullName(), cls.getName(), cls.getContent());
+		ClassBreakdown changed = ClassBreakdown.breakdown(cls.getFullName(), cls.getName(),
+				this.getCodeArea().getText());
 
 		ClassBreakdown completed = original.mergeImports(changed.getImports())
 				.mergeMethods(changed.getChangedMethods());
@@ -38,14 +44,15 @@ public class EditMethodDialog extends ApkSpyDialog {
 		writer = writer.finish();
 		cls.getCls().getClassNode().setCode(writer);
 
-		int caret = selectedCodeArea.getCaretPosition();
-		selectedCodeArea.setText(completed.toString());
+		try {
+			int caret = selectedCodeArea.getCaretPosition();
+			selectedCodeArea.setText(completed.toString());
+			selectedCodeArea.setCaretPosition(caret);
+		} catch (IllegalArgumentException e) {
+			System.out.println("Warning: could not reset position of cursor");
+		}
 
-		selectedCodeArea.setCaretPosition(caret);
-
-		ChangeCache.putChange(cls.getFullName(),
-				changed.mergeMemberVariables(original.getMemberVariables()).mergeMethodStubs(original.getMethods()),
-				changed.getMethods().get(0));
+		ChangeCache.putChange(cls.getFullName(), this.merge(changed, original), changed.getMethods().get(0));
 
 		dispose();
 	}
@@ -53,12 +60,12 @@ public class EditMethodDialog extends ApkSpyDialog {
 	@Override
 	protected void onCompile() {
 		try {
-			ClassBreakdown original = ClassBreakdown.breakdown(cls.getFullName(), cls.getContent());
-			ClassBreakdown changed = ClassBreakdown.breakdown(cls.getFullName(), this.getCodeArea().getText());
+			ClassBreakdown original = ClassBreakdown.breakdown(cls.getFullName(), cls.getName(), cls.getContent());
+			ClassBreakdown changed = ClassBreakdown.breakdown(cls.getFullName(), cls.getName(),
+					this.getCodeArea().getText());
 
 			if (ApkSpy.lint(this.getMainWindow().getProject().getFilePath().toString(), cls.getFullName(),
-					changed.mergeMemberVariables(original.getMemberVariables()).mergeMethodStubs(original.getMethods()),
-					new OutputStream() {
+					this.merge(changed, original), new OutputStream() {
 						@Override
 						public void write(int b) throws IOException {
 							System.out.print((char) b);

@@ -79,7 +79,7 @@ public class ApkSpySaver extends JDialog {
 						try {
 							boolean success = ApkSpy.merge(mainWindow.getProject().getFilePath().toString(),
 									saveLocation.getText(), mainWindow.getSettings().getAndroidSdkPath(), "jadx",
-									ChangeCache.getChanges(), new OutputStream() {
+									ChangeCache.getChanges(), ChangeCache.getClassDeletions(), new OutputStream() {
 										@Override
 										public void write(int b) throws IOException {
 											System.out.print((char) b);

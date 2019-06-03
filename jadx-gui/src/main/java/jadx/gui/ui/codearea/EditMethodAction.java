@@ -72,14 +72,14 @@ public class EditMethodAction extends AbstractAction implements PopupMenuListene
 					line = text.charAt(i) + line;
 				}
 				if (text.charAt(offset) != '\n') {
-					for (int i = offset; i < text.length(); i++) {
+					for (int i = offset + 1; i < text.length(); i++) {
 						if (text.charAt(i) == '\n') {
 							break;
 						}
 						line += text.charAt(i);
 					}
 				}
-				if (line.startsWith("    ") && (line.startsWith("     ") || line.endsWith("{"))) {
+				if (line.startsWith("    ") && (line.startsWith("     ") || line.trim().endsWith("{"))) {
 					determinedContent = extractMethod(text, offset);
 				}
 			}
