@@ -36,7 +36,7 @@ public class ExportGradleProject {
 		this.resOutDir = new File(outDir, "src/main");
 	}
 
-	public void init(boolean x) {
+	public void init() {
 		try {
 			FileUtils.makeDirs(srcOutDir);
 			FileUtils.makeDirs(resOutDir);
@@ -57,7 +57,7 @@ public class ExportGradleProject {
 		tmpl.add("minSdkVersion", 9);
 		tmpl.add("targetSdkVersion", 21);
 		tmpl.add("extractedDependencies", String.join(System.lineSeparator(), dependencies.stream()
-				.map(dependency -> "implementation '" + dependency + "'").collect(Collectors.toList())));
+				.map(dependency -> "    implementation '" + dependency + "'").collect(Collectors.toList())));
 		tmpl.save(new File(outDir, "build.gradle"));
 	}
 

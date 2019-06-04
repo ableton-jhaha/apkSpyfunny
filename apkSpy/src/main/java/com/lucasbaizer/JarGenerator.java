@@ -112,33 +112,33 @@ public class JarGenerator {
 
 			visitor.visitCode();
 			switch (returnType.getDescriptor()) {
-			case "Z":
-			case "B":
-			case "S":
-			case "I":
-			case "C":
-				visitor.visitInsn(Opcodes.ICONST_0);
-				visitor.visitInsn(Opcodes.IRETURN);
-				break;
-			case "J":
-				visitor.visitInsn(Opcodes.LCONST_0);
-				visitor.visitInsn(Opcodes.LRETURN);
-				break;
-			case "F":
-				visitor.visitInsn(Opcodes.FCONST_0);
-				visitor.visitInsn(Opcodes.FRETURN);
-				break;
-			case "D":
-				visitor.visitInsn(Opcodes.DCONST_0);
-				visitor.visitInsn(Opcodes.DRETURN);
-				break;
-			case "V":
-				visitor.visitInsn(Opcodes.RETURN);
-				break;
-			default:
-				visitor.visitInsn(Opcodes.ACONST_NULL);
-				visitor.visitInsn(Opcodes.ARETURN);
-				break;
+				case "Z":
+				case "B":
+				case "S":
+				case "I":
+				case "C":
+					visitor.visitInsn(Opcodes.ICONST_0);
+					visitor.visitInsn(Opcodes.IRETURN);
+					break;
+				case "J":
+					visitor.visitInsn(Opcodes.LCONST_0);
+					visitor.visitInsn(Opcodes.LRETURN);
+					break;
+				case "F":
+					visitor.visitInsn(Opcodes.FCONST_0);
+					visitor.visitInsn(Opcodes.FRETURN);
+					break;
+				case "D":
+					visitor.visitInsn(Opcodes.DCONST_0);
+					visitor.visitInsn(Opcodes.DRETURN);
+					break;
+				case "V":
+					visitor.visitInsn(Opcodes.RETURN);
+					break;
+				default:
+					visitor.visitInsn(Opcodes.ACONST_NULL);
+					visitor.visitInsn(Opcodes.ARETURN);
+					break;
 			}
 
 			visitor.visitMaxs(20, 20);

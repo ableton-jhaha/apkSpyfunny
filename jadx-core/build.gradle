@@ -16,6 +16,7 @@ dependencies {
     }
     compile 'com.google.guava:guava:27.1-jre'
     compile 'com.google.code.gson:gson:2.8.5'
+    compile 'org.jsoup:jsoup:1.11.3'
 
     testCompile 'org.apache.commons:commons-lang3:3.8.1'
 }

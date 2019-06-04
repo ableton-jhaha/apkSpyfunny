@@ -74,8 +74,11 @@ public class JadxSettings extends JadxCLIArgs {
 	private String androidSdkPath = "";
 
 	@JadxSettingsAdapter.GsonExclude
-	@Parameter(names = { "-sc",
-			"--select-class" }, description = "GUI: Open the selected class and show the decompiled code")
+	@Parameter(
+			names = { "-sc",
+					"--select-class" },
+			description = "GUI: Open the selected class and show the decompiled code"
+	)
 	private String cmdSelectClass = null;
 
 	public static JadxSettings makeDefault() {

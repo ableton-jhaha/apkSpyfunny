@@ -4,37 +4,48 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.io.StringWriter;
+import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
-import javax.net.ssl.HttpsURLConnection;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathFactory;
 
-import org.jf.baksmali.BaksmaliOptions;
+import org.apache.commons.lang3.StringUtils;
 import org.jf.baksmali.Adaptors.ClassDefinition;
+import org.jf.baksmali.BaksmaliOptions;
 import org.jf.dexlib2.DexFileFactory;
 import org.jf.dexlib2.Opcodes;
 import org.jf.dexlib2.dexbacked.DexBackedClassDef;
 import org.jf.dexlib2.dexbacked.DexBackedDexFile;
 import org.jf.util.IndentingWriter;
+import org.jsoup.Jsoup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 import jadx.core.Jadx;
 import jadx.core.ProcessClass;
@@ -193,7 +204,7 @@ public final class JadxDecompiler {
 		ExportGradleProject export = null;
 		if (args.isExportAsGradleProject()) {
 			export = new ExportGradleProject(root, args.getOutDir());
-			export.init(true);
+			export.init();
 			sourcesOutDir = export.getSrcOutDir();
 			resOutDir = export.getResOutDir();
 		} else {
@@ -205,10 +216,12 @@ public final class JadxDecompiler {
 		}
 		if (saveSources) {
 			List<String> dependencies = appendSourcesSave(executor, sourcesOutDir, export);
-			try {
-				export.saveBuildGradle(dependencies);
-			} catch (IOException e) {
-				e.printStackTrace();
+			if (args.isExportAsGradleProject()) {
+				try {
+					export.saveBuildGradle(dependencies);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 		}
 		return executor;
@@ -220,47 +233,167 @@ public final class JadxDecompiler {
 		}
 	}
 
+	private static final XPathFactory XPATH = XPathFactory.newInstance();
+
+	private String httpGet(String url) throws IOException {
+		HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+		connection.setRequestMethod("GET");
+
+		if (connection.getResponseCode() == 404) {
+			return null;
+		}
+
+		BufferedReader rd = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+		String line;
+		StringBuilder result = new StringBuilder();
+		while ((line = rd.readLine()) != null) {
+			result.append(line);
+		}
+		rd.close();
+
+		return result.toString();
+	}
+
+	private Document generateDocument(String url) throws IOException, SAXException, ParserConfigurationException {
+		String http = httpGet(url);
+		if (http == null) {
+			return null;
+		}
+		org.jsoup.nodes.Document document = Jsoup.parse(http);
+		document.outputSettings().syntax(org.jsoup.nodes.Document.OutputSettings.Syntax.xml);
+		String xhtml = document.html();
+
+		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+		DocumentBuilder builder = factory.newDocumentBuilder();
+		return builder.parse(new InputSource(new StringReader(xhtml)));
+	}
+
 	private List<String> appendSourcesSave(ExecutorService executor, File outDir, ExportGradleProject export) {
 		List<String> dependencies = new ArrayList<>();
+		List<String> dependencyPackages = new ArrayList<>();
 
 		if (export != null && args.isConvertDependencies()) {
-			for (JavaPackage pkg : getPackages()) {
-				String gid = pkg.getFullName();
+			Set<String> packages = new HashSet<>();
+			for (JavaPackage pkg : this.getPackages()) {
+				packages.add(pkg.getFullName());
 
-				try {
-					HttpsURLConnection connection = (HttpsURLConnection) new URL(
-							"https://search.maven.org/solrsearch/select?q=g"
-									+ URLEncoder.encode(":\"" + gid + "\"", "UTF-8") + "&wt=json").openConnection();
-					connection.setRequestMethod("GET");
-					BufferedReader rd = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-					String line;
-					StringBuilder result = new StringBuilder();
-					while ((line = rd.readLine()) != null) {
-						result.append(line);
+				String[] split = pkg.getFullName().split("\\.");
+				String current = split[0];
+				for (int i = 1; i < split.length - 1; i++) {
+					current += "." + split[i];
+					packages.add(current);
+				}
+			}
+
+			for (String pkg : packages) {
+				if (pkg.startsWith("android.support") && StringUtils.countMatches(pkg, ".") == 2) {
+					String supportVersion = pkg.split("\\.")[2];
+					dependencies.add("com.android.support:support-" + supportVersion + ":+");
+
+					for (JavaClass cls : getClasses()) {
+						if (cls.getPackage().startsWith(pkg)) {
+							cls.getClassNode().add(AFlag.DONT_GENERATE);
+						}
 					}
-					rd.close();
+				}
+			}
 
-					JsonObject json = new JsonParser().parse(result.toString()).getAsJsonObject().get("response")
-							.getAsJsonObject();
-					if (json.get("numFound").getAsInt() == 0) {
-						continue;
+			try {
+				XPathExpression xPathFindArtifacts = XPATH.newXPath().compile("/html/body/main/pre/a");
+				XPathExpression xPathFindMetadata = XPATH.newXPath()
+						.compile("/html/body/main/pre/a[@href='maven-metadata.xml']");
+
+				for (String pkg : packages) {
+					String group = pkg.replace('.', '/');
+
+					if (pkg.equals("com.google.ads.afsn") || pkg.startsWith("com.google.android")
+							|| pkg.startsWith("com.google.ar") || pkg.startsWith("com.google.firebase")
+							|| pkg.startsWith("com.google.gms") || pkg.startsWith("com.android")
+							|| pkg.startsWith("androidx") || pkg.startsWith("android.arch")
+							|| pkg.equals("com.crashlytics.sdk.android") || pkg.equals("io.fabric.sdk.android")
+							|| pkg.equals("org.chromium.net") || pkg.equals("org.chromium.net")) {
+						String xml = httpGet("https://dl.google.com/dl/android/maven2/" + group + "/group-index.xml");
+						if (xml != null) {
+							DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+							DocumentBuilder builder = factory.newDocumentBuilder();
+							Document doc = builder.parse(new InputSource(new StringReader(xml)));
+							if (doc != null) {
+								NodeList children = doc.getChildNodes().item(0).getChildNodes();
+								List<String> gradleStrings = new ArrayList<>();
+								for (int i = 0; i < children.getLength(); i++) {
+									Node child = children.item(i);
+
+									if (!child.getNodeName().equals("#text")) {
+										String[] versions = child.getAttributes().getNamedItem("versions")
+												.getNodeValue().split(",");
+										gradleStrings.add(
+												pkg + ":" + child.getNodeName() + ":" + versions[versions.length - 1]);
+									}
+								}
+
+								gradleStrings.sort((o1, o2) -> {
+									return o1.substring(0, o1.lastIndexOf(':'))
+											.compareTo(o2.substring(0, o2.lastIndexOf(':')));
+								});
+
+								List<String> returned = this.args.getGradleDependencyFunction().apply(gradleStrings);
+								if (returned.size() > 0) {
+									dependencyPackages.add(pkg);
+									dependencies.addAll(returned);
+								}
+							}
+						}
+					} else {
+						Document doc = generateDocument("http://central.maven.org/maven2/" + group);
+
+						if (doc != null) {
+							NodeList nodes = (NodeList) xPathFindArtifacts.evaluate(doc, XPathConstants.NODESET);
+							if (nodes != null && nodes.getLength() > 0) {
+								// start at 1 to skip the '../' link
+								List<String> gradleStrings = new ArrayList<>();
+								for (int i = 1; i < nodes.getLength(); i++) {
+									Node node = nodes.item(i);
+									String artifact = node.getTextContent().substring(0,
+											node.getTextContent().length() - 1);
+
+									Document artifactDocument = generateDocument(
+											"http://central.maven.org/maven2/" + group + "/" + artifact);
+
+									Node metadata = (Node) xPathFindMetadata.evaluate(artifactDocument,
+											XPathConstants.NODE);
+									if (metadata == null) {
+										continue;
+									}
+									String mostRecentVersion = metadata.getPreviousSibling().getPreviousSibling()
+											.getTextContent();
+									mostRecentVersion = mostRecentVersion.substring(0, mostRecentVersion.length() - 1);
+
+									gradleStrings.add(pkg + ":" + artifact + ":" + mostRecentVersion);
+								}
+
+								gradleStrings.sort((o1, o2) -> {
+									return o1.substring(0, o1.lastIndexOf(':'))
+											.compareTo(o2.substring(0, o2.lastIndexOf(':')));
+								});
+
+								List<String> returned = this.args.getGradleDependencyFunction().apply(gradleStrings);
+								if (returned.size() > 0) {
+									dependencyPackages.add(pkg);
+									dependencies.addAll(returned);
+								}
+							}
+						}
 					}
+				}
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
 
-					List<String> gradleStrings = new ArrayList<>();
-					for (JsonElement item : json.get("docs").getAsJsonArray()) {
-						JsonObject doc = item.getAsJsonObject();
-
-						String gradleString = doc.get("id").getAsString() + ":"
-								+ doc.get("latestVersion").getAsString();
-						gradleStrings.add(gradleString);
-					}
-
-					String returned = this.args.getGradleDependencyFunction().apply(gradleStrings);
-					if (returned != null) {
-						dependencies.add(returned);
-					}
-				} catch (IOException e) {
-					e.printStackTrace();
+		for (String pkg : dependencyPackages) {
+			for (JavaClass cls : getClasses()) {
+				if (cls.getPackage().startsWith(pkg)) {
+					cls.getClassNode().add(AFlag.DONT_GENERATE);
 				}
 			}
 		}

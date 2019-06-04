@@ -1,5 +1,7 @@
 package jadx.gui.ui;
 
+import static javax.swing.KeyStroke.getKeyStroke;
+
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -7,6 +9,9 @@ import java.awt.DisplayMode;
 import java.awt.Font;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.dnd.DnDConstants;
 import java.awt.dnd.DropTarget;
 import java.awt.event.ActionEvent;
@@ -37,6 +42,8 @@ import javax.swing.ImageIcon;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -48,6 +55,7 @@ import javax.swing.JSplitPane;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.JTree;
+import javax.swing.ListSelectionModel;
 import javax.swing.ProgressMonitor;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
@@ -98,8 +106,6 @@ import jadx.gui.utils.JumpPosition;
 import jadx.gui.utils.Link;
 import jadx.gui.utils.NLS;
 import jadx.gui.utils.UiUtils;
-
-import static javax.swing.KeyStroke.getKeyStroke;
 
 @SuppressWarnings("serial")
 public class MainWindow extends JFrame {
@@ -426,19 +432,38 @@ public class MainWindow extends JFrame {
 
 		int ret = fileChooser.showSaveDialog(mainPanel);
 		if (ret == JFileChooser.APPROVE_OPTION) {
-			boolean autoConvert = JOptionPane.showConfirmDialog(this,
-					"Would you like to automatically convert packaged dependencies into Gradle dependencies?",
-					"Save as Gradle Project", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION;
-
-			decompilerArgs.setExportAsGradleProject(export);
-			decompilerArgs.setConvertDependencies(autoConvert);
-			if (autoConvert) {
-				decompilerArgs.setGradleDependencyFunction(dependencies -> {
-					System.out.println(dependencies);
-					return null;
-				});
-			}
 			if (export) {
+				boolean autoConvert = JOptionPane.showConfirmDialog(this,
+						"Would you like to automatically convert packaged dependencies into Gradle dependencies?",
+						"Save as Gradle Project", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION;
+
+				decompilerArgs.setExportAsGradleProject(export);
+				decompilerArgs.setConvertDependencies(autoConvert);
+				if (autoConvert) {
+					decompilerArgs.setGradleDependencyFunction(dependencies -> {
+						JPanel panel = new JPanel(new GridBagLayout());
+						GridBagConstraints gbc = new GridBagConstraints(0, 0, 0, 0, 1, 1, GridBagConstraints.NORTHWEST,
+								GridBagConstraints.HORIZONTAL, new Insets(5, 5, 5, 5), 0, 0);
+
+						JList<String> list = new JList<>(dependencies.toArray(new String[0]));
+						list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+						panel.add(new JLabel("Please select all dependencies you'd like to import for the '"
+								+ dependencies.get(0).split(":")[0] + "' package."), gbc);
+
+						JScrollPane scroll = new JScrollPane(list);
+						scroll.setMaximumSize(new Dimension(list.getPreferredSize().width, 600));
+
+						gbc.gridy = 1;
+						panel.add(scroll, gbc);
+
+						if (JOptionPane.showConfirmDialog(this, panel, "Save as Gradle Project",
+								JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
+							return list.getSelectedValuesList();
+						}
+						return new ArrayList<>();
+					});
+				}
+
 				decompilerArgs.setSkipSources(false);
 				decompilerArgs.setSkipResources(false);
 			} else {

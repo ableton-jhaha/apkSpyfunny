@@ -13,7 +13,7 @@ println("jadx version: ${jadxVersion}")
 allprojects {
 	apply plugin: 'java'
 	apply plugin: 'jacoco'
-	apply plugin: 'checkstyle'
+	// apply plugin: 'checkstyle'
 
 	version = jadxVersion
 
@@ -71,10 +71,10 @@ allprojects {
 		}
 	}
 
-	checkstyleMain {
-		// exclude all sources in samples module
-		exclude '**/samples/**'
-	}
+	//checkstyleMain {
+	//	// exclude all sources in samples module
+	//	exclude '**/samples/**'
+	//}
 }
 
 sonarqube {

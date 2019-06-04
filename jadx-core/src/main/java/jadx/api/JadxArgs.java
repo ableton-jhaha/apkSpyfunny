@@ -56,7 +56,7 @@ public class JadxArgs {
 	private boolean respectBytecodeAccModifiers = false;
 	private boolean exportAsGradleProject = false;
 	private boolean convertDependencies = false;
-	private Function<List<String>, String> gradleDependencyConsumer = null;
+	private Function<List<String>, List<String>> gradleDependencyConsumer = null;
 
 	private boolean fsCaseSensitive;
 
@@ -312,11 +312,11 @@ public class JadxArgs {
 		this.convertDependencies = convertDependencies;
 	}
 
-	public Function<List<String>, String> getGradleDependencyFunction() {
+	public Function<List<String>, List<String>> getGradleDependencyFunction() {
 		return gradleDependencyConsumer;
 	}
 
-	public void setGradleDependencyFunction(Function<List<String>, String> gradleDependencyConsumer) {
+	public void setGradleDependencyFunction(Function<List<String>, List<String>> gradleDependencyConsumer) {
 		this.gradleDependencyConsumer = gradleDependencyConsumer;
 	}
 
