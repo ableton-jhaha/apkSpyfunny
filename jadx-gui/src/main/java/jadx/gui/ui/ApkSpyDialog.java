@@ -37,8 +37,7 @@ public abstract class ApkSpyDialog extends JDialog {
 		CodeContentPanel codeArea = new CodeContentPanel(pane, jnode);
 		codeArea.setPreferredSize(new Dimension(800, 600));
 
-		JScrollPane scroll = new JScrollPane(codeArea);
-		pane.add(scroll);
+		pane.add(codeArea);
 		content.add(pane);
 
 		this.output = new JTextArea();
@@ -46,7 +45,7 @@ public abstract class ApkSpyDialog extends JDialog {
 		this.output.setEditable(false);
 
 		JScrollPane scroll2 = new JScrollPane(output);
-		Dimension size = scroll.getPreferredSize();
+		Dimension size = codeArea.getPreferredSize();
 		scroll2.setPreferredSize(size);
 		content.add(scroll2);
 

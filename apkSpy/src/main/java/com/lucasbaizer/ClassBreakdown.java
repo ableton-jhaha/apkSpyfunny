@@ -58,10 +58,16 @@ public class ClassBreakdown implements Cloneable {
 						}
 						currentBlock = "";
 						blockType = 0;
+					} else if (line.trim().equals("};") && blockType == 3) {
+						memberVariables += currentBlock + "};\n";
+						currentBlock = "";
+						blockType = 0;
 					} else if (line.trim().endsWith(";")) {
 						memberVariables += line.trim() + "\n";
 					} else {
-						if (line.contains("class ")) {
+						if (line.contains("new ")) {
+							blockType = 3;
+						} else if (line.contains("class ")) {
 							blockType = 2;
 						} else {
 							blockType = 1;
@@ -79,6 +85,8 @@ public class ClassBreakdown implements Cloneable {
 				methods.add(new JavaMethod(currentBlock));
 			} else if (blockType == 2) {
 				innerClasses.add(ClassBreakdown.breakdown(null, null, currentBlock.trim() + "\n}"));
+			} else if (blockType == 3) {
+				memberVariables += currentBlock + "};\n";
 			}
 		}
 
@@ -273,6 +281,7 @@ public class ClassBreakdown implements Cloneable {
 	@Override
 	public String toString() {
 		StringBuilder str = new StringBuilder(this.imports);
+
 		str.append((this.classDeclaration + " {\n").replaceAll("(.*?)(class|interface|enum|@interface) (.+?) (.+)",
 				"$1$2 " + this.simpleName + " $4"));
 		if (this.memberVariables.length() > 0) {

@@ -82,9 +82,7 @@ public class ApkSpy {
 	public static boolean merge(String apk, String outputLocation, String sdkPath, String applicationId,
 			Map<String, ClassBreakdown> classes, List<String> deletions, OutputStream out)
 			throws IOException, InterruptedException {
-		System.out.println(sdkPath);
 		sdkPath = sdkPath.replace("\\", "\\\\");
-		System.out.println(sdkPath);
 
 		System.out.println("Merging: " + apk);
 		File modifyingApk = new File(apk);
@@ -162,64 +160,91 @@ public class ApkSpy {
 
 		ApktoolWrapper.decode(modifyingApk.toPath(), "original", true, out);
 
+		List<Path> smaliFolders = Files.list(Paths.get("smali", "generated"))
+				.filter(path -> Files.isDirectory(path) && path.getFileName().toString().startsWith("smali"))
+				.collect(Collectors.toList());
+
 		for (String deletion : deletions) {
 			// file might not exist, as we could delete temporary classes that we made in
-			// between compilations
-			Files.deleteIfExists(
-					Paths.get("smali", "original", "smali", deletion.replace('.', File.separatorChar) + ".smali"));
+			// between compilations in the editor
+			for (Path path : smaliFolders) {
+				if (Files.deleteIfExists(Paths.get(path.toAbsolutePath().toString(),
+						deletion.replace('.', File.separatorChar) + ".smali"))) {
+					break;
+				}
+			}
 		}
 
-		Files.walk(Paths.get("smali", "generated", "smali"))
-				.filter(path -> Files.isRegularFile(path) && path.getFileName().toString().startsWith("ApkSpy_"))
-				.forEach(path -> {
-					try {
-						Path equivalent = Paths.get("smali", "original", "smali",
-								path.toAbsolutePath().toString().substring(
-										Paths.get("smali", "generated", "smali").toAbsolutePath().toString().length())
-										.replace("ApkSpy_", ""));
-
-						String modifiedContent = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
-						modifiedContent = modifiedContent.replace("ApkSpy_", "");
-
-						if (Files.exists(equivalent)) {
-							String originalContent = new String(Files.readAllBytes(equivalent), StandardCharsets.UTF_8);
-
-							SmaliBreakdown modifiedSmali = SmaliBreakdown.breakdown(modifiedContent);
-
-							ClassBreakdown relative = classes.get(modifiedSmali.getClassName());
-
-							// check to make sure it's not an inner class
-							if (relative != null) {
-								System.out.println("Merging smali for class: " + modifiedSmali.getClassName());
-
-								List<SmaliMethod> methods = modifiedSmali.getChangedMethods(relative);
-
-								System.out
-										.println("Originally changed methods: " + relative.getChangedMethods().size());
-								System.out.println("Merging method count: " + methods.size());
-
-								StringBuilder builder = new StringBuilder(originalContent);
-								for (SmaliMethod method : methods) {
-									SmaliBreakdown originalSmali = SmaliBreakdown.breakdown(builder.toString());
-									SmaliMethod equivalentMethod = originalSmali.getEquivalentMethod(method);
-
-									builder.delete(equivalentMethod.getStart(), equivalentMethod.getEnd());
-									builder.insert(equivalentMethod.getStart(), method.getContent());
+		for (Path smaliFolder : smaliFolders) {
+			System.out.println("Searching through: " + smaliFolder);
+			Files.walk(smaliFolder)
+					.filter(path -> Files.isRegularFile(path) && path.getFileName().toString().startsWith("ApkSpy_"))
+					.forEach(path -> {
+						try {
+							System.out.println("Merging smali file: " + path);
+							Path equivalent = null;
+							for (Path otherFolder : smaliFolders) {
+								Path test = Paths.get(otherFolder.toString(),
+										path.toAbsolutePath().toString()
+												.substring(smaliFolder.toAbsolutePath().toString().length())
+												.replace("ApkSpy_", ""));
+								// System.out.println(test);
+								if (Files.isRegularFile(test)) {
+									equivalent = test;
+									break;
 								}
-
-								Files.write(equivalent, builder.toString().getBytes(StandardCharsets.UTF_8));
 							}
-						} else {
-							Files.copy(path, equivalent);
+							System.out.println("Merging into file: " + equivalent);
+
+							String modifiedContent = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+							modifiedContent = modifiedContent.replace("ApkSpy_", "");
+
+							if (equivalent != null) {
+								String originalContent = new String(Files.readAllBytes(equivalent),
+										StandardCharsets.UTF_8);
+
+								SmaliBreakdown modifiedSmali = SmaliBreakdown.breakdown(modifiedContent);
+
+								ClassBreakdown relative = classes.get(modifiedSmali.getClassName());
+
+								// check to make sure it's not an inner class
+								if (relative != null) {
+									System.out.println("Merging smali for class: " + modifiedSmali.getClassName());
+
+									List<SmaliMethod> methods = modifiedSmali.getChangedMethods(relative);
+
+									System.out.println(
+											"Originally changed methods: " + relative.getChangedMethods().size());
+									System.out.println("Merging method count: " + methods.size());
+
+									StringBuilder builder = new StringBuilder(originalContent);
+									for (SmaliMethod method : methods) {
+										SmaliBreakdown originalSmali = SmaliBreakdown.breakdown(builder.toString());
+										SmaliMethod equivalentMethod = originalSmali.getEquivalentMethod(method);
+
+										builder.delete(equivalentMethod.getStart(), equivalentMethod.getEnd());
+										builder.insert(equivalentMethod.getStart(), method.getContent());
+									}
+
+									Files.write(equivalent, builder.toString().getBytes(StandardCharsets.UTF_8));
+								}
+							} else {
+								equivalent = Paths.get(smaliFolder.toString(),
+										path.toAbsolutePath().toString()
+												.substring(smaliFolder.toAbsolutePath().toString().length())
+												.replace("ApkSpy_", ""));
+								Files.createDirectories(equivalent.getParent());
+								Files.copy(path, equivalent);
+							}
+						} catch (IOException e) {
+							e.printStackTrace();
+							System.exit(1);
 						}
-					} catch (IOException e) {
-						e.printStackTrace();
-						System.exit(1);
-					}
-				});
+					});
+		}
 
 		ApktoolWrapper.build(Paths.get("smali", "original"), outputLocation, out);
-		Util.attemptDelete(new File("smali"));
+		// TODO Util.attemptDelete(new File("smali"));
 
 		out.write("Finished creating APK!".getBytes(StandardCharsets.UTF_8));
 		return true;
