@@ -163,6 +163,8 @@ public class ApkSpy {
 		List<Path> smaliFolders = Files.list(Paths.get("smali", "generated"))
 				.filter(path -> Files.isDirectory(path) && path.getFileName().toString().startsWith("smali"))
 				.collect(Collectors.toList());
+		List<Path> destinationFolders = smaliFolders.stream()
+				.map(path -> Paths.get(path.toString().replace("generated", "original"))).collect(Collectors.toList());
 
 		for (String deletion : deletions) {
 			// file might not exist, as we could delete temporary classes that we made in
@@ -183,7 +185,7 @@ public class ApkSpy {
 						try {
 							System.out.println("Merging smali file: " + path);
 							Path equivalent = null;
-							for (Path otherFolder : smaliFolders) {
+							for (Path otherFolder : destinationFolders) {
 								Path test = Paths.get(otherFolder.toString(),
 										path.toAbsolutePath().toString()
 												.substring(smaliFolder.toAbsolutePath().toString().length())
@@ -229,7 +231,7 @@ public class ApkSpy {
 									Files.write(equivalent, builder.toString().getBytes(StandardCharsets.UTF_8));
 								}
 							} else {
-								equivalent = Paths.get(smaliFolder.toString(),
+								equivalent = Paths.get(smaliFolder.toString().replace("generated", "original"),
 										path.toAbsolutePath().toString()
 												.substring(smaliFolder.toAbsolutePath().toString().length())
 												.replace("ApkSpy_", ""));

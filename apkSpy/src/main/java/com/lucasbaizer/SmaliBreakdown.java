@@ -87,14 +87,21 @@ public class SmaliBreakdown {
 				if (javaName.equals(fromClass.getSimpleName())) {
 					javaName = "<init>";
 					javaReturnType = null;
+				} else {
+					javaReturnType = javaReturnType.trim();
 				}
 
 				List<String> javaArgumentsTypes = Arrays.stream(javaDeclaration
 						.substring(javaDeclaration.indexOf('(') + 1, javaDeclaration.lastIndexOf(')')).split(","))
 						.map(param -> param.trim().split(" ", 2)[0]).collect(Collectors.toList());
+				if (javaArgumentsTypes.size() == 1 && javaArgumentsTypes.get(0).isEmpty()) {
+					// empty arguments
+					javaArgumentsTypes = new ArrayList<String>();
+				}
 
-				if (javaName.equals(name)
-						&& (javaReturnType == null || javaReturnType.trim().equals(getSimpleName(returnType)))
+				String simpleReturnType = getSimpleName(returnType);
+
+				if (javaName.equals(name) && (javaReturnType == null || javaReturnType.equals(simpleReturnType))
 						&& types.length == javaArgumentsTypes.size()) {
 					for (int i = 0; i < types.length; i++) {
 						if (!javaArgumentsTypes.get(i).equals(getSimpleName(types[i]))) {
